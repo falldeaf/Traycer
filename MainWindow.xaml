@@ -1,0 +1,13 @@
+<Window x:Class="Traycer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Traycer HUD" Width="800" Height="60"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" Topmost="True"
+        ShowInTaskbar="False" ResizeMode="NoResize">
+    <!-- Root surface -->
+    <Border x:Name="RootBorder" Margin="4" CornerRadius="8" Background="#CC141414">
+        <!-- Wells laid out as fixed-width columns -->
+        <Grid x:Name="WellsGrid" Margin="8"/>
+    </Border>
+</Window>

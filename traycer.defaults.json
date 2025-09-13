@@ -1,0 +1,24 @@
+{
+  "placement": {
+    "height": 48,
+    "bottomOffset": -4,
+    "padding": 4,
+    "cornerRadius": 8
+  },
+  "wells": [
+    { "id": "weather", "width": 240, "index": 0 },
+    { "id": "build",   "width": 180 },
+    { "id": "meeting", "width": 260 },
+    { "id": "net",     "width": 140 },
+    { "id": "cpu",     "width": 110 },
+    { "id": "ram",     "width": 110 }
+  ],
+  "updates": [
+    { "well": "weather", "text": "⛅  73°F Overcast", "bg": "#33223333" },
+    { "well": "build",   "text": "✅ Passing",        "bg": "#33305533" }
+  ],
+  "actions": {
+    "build":   "start https://ci.example.com",
+    "weather": "start https://weather.com"
+  }
+}
