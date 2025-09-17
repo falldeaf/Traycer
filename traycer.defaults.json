@@ -5,20 +5,34 @@
     "padding": 4,
     "cornerRadius": 8
   },
-  "wells": [
-    { "id": "weather", "width": 240, "index": 0 },
-    { "id": "build",   "width": 180 },
-    { "id": "meeting", "width": 260 },
-    { "id": "net",     "width": 140 },
-    { "id": "cpu",     "width": 110 },
-    { "id": "ram",     "width": 110 }
-  ],
-  "updates": [
-    { "well": "weather", "text": "⛅  73°F Overcast", "bg": "#33223333" },
-    { "well": "build",   "text": "✅ Passing",        "bg": "#33305533" }
-  ],
-  "actions": {
-    "build":   "start https://ci.example.com",
-    "weather": "start https://weather.com"
-  }
+  "tasks": [
+    {
+      "id": "weather-refresh",
+      "command": "python",
+      "args": "\"C:\\projects\\git\\Traycer\\weather.py\" 39.95238 -75.16362",
+      "mode": "schedule",
+      "autoStart": true,
+      "schedule": {
+        "frequency": "minute",
+        "interval": 30
+      }
+    },
+        {
+      "id": "calendar-refresh",
+      "command": "python",
+      "args": "\"C:\\projects\\git\\Traycer\\calendar_overview.py\" \"https://calendar.google.com/calendar/ical/thomas.mardis%40simxar.com/private-c5733251a4bd03b4df0f6514eaa5ffdd/basic.ics\"",
+      "mode": "schedule",
+      "autoStart": true,
+      "schedule": {
+        "frequency": "minute",
+        "interval": 15
+      }
+    },
+    {
+      "id": "Branches",
+      "command": "\"C:\\projects\\git\\TraycerBranches\\bin\\Release\\net10.0\\win-x64\\publish\\TraycerBranches.exe\"",
+      "mode": "once",
+      "autoStart": true
+    }
+  ]
 }

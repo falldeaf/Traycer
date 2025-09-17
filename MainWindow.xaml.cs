@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -73,6 +74,9 @@ namespace Traycer
         private readonly Dictionary<string, (Border border, TextBlock text)> _wells = new();
         // wellId -> action command
         private readonly Dictionary<string, string> _actions = new();
+        // configured background tasks
+        private readonly Dictionary<string, ManagedTask> _tasks = new(StringComparer.OrdinalIgnoreCase);
+        private readonly WF.ContextMenuStrip _trayMenu;
 
         // placement settings (IPC "placement")
         private double? _heightOverride = 26;   // tighter by default
@@ -88,14 +92,20 @@ namespace Traycer
             InitializeComponent();
 
             // Try defaults file; if not present, fall back to built-ins
-            if (!TryLoadDefaults())
+            if (!TryLoadDefaults(out var error))
             {
-                ApplyConfig(new[]
-                {
-                    new WellConfig("weather", 240),
-                    new WellConfig("build",   180),
-                });
+                var message = string.IsNullOrWhiteSpace(error) ? "Traycer could not load its defaults file." : error;
+                try { Console.Error.WriteLine(message); } catch { }
+                System.Windows.MessageBox.Show(message, "Traycer", MessageBoxButton.OK, MessageBoxImage.Error);
+                Environment.Exit(1);
+                return;
             }
+
+            Console.CancelKeyPress += (_, args) =>
+            {
+                args.Cancel = true;
+                Dispatcher.Invoke(() => Close());
+            };
 
             Loaded += OnLoaded;
             Closed += OnClosed;
@@ -110,11 +120,10 @@ namespace Traycer
                 Icon = SD.SystemIcons.Information,
                 Text = "Traycer HUD"
             };
-            var menu = new WF.ContextMenuStrip();
-            menu.Items.Add("Toggle Click-Through (Win+Alt+H)", null, (_, __) => ToggleClickThrough());
-            menu.Items.Add(new WF.ToolStripSeparator());
-            menu.Items.Add("Exit", null, (_, __) => Close());
-            _tray.ContextMenuStrip = menu;
+            _trayMenu = new WF.ContextMenuStrip();
+            _trayMenu.Opening += (_, __) => RefreshTrayMenu();
+            _tray.ContextMenuStrip = _trayMenu;
+            RefreshTrayMenu();
             _tray.Visible = true;
 
             ApplyChrome();
@@ -148,6 +157,24 @@ namespace Traycer
             _cts.Cancel();
             try { _pipeTask?.Wait(500); } catch { }
             _topmostTimer?.Stop();
+
+            foreach (var task in _tasks.Values)
+            {
+                try
+                {
+                    if (task.IsScheduled)
+                    {
+                        RemoveScheduledTask(task.Config);
+                    }
+                    else if (task.ActiveProcess is { HasExited: false })
+                    {
+                        task.ActiveProcess.Kill(true);
+                    }
+                }
+                catch { }
+            }
+            _tasks.Clear();
+
             _tray.Visible = false;
             _tray.Dispose();
         }
@@ -158,14 +185,15 @@ namespace Traycer
             var (_, rectTB) = GetTaskbarRect();
             var screen = WF.Screen.PrimaryScreen!.Bounds;
 
-            double width = Math.Max(80, screen.Width / 3.0) - (2 * _padding);
             double height = (_heightOverride ?? rectTB.Height - (2 * _padding));
             height = Math.Max(20, height);
 
             double x = screen.Left + _padding;
             double y = screen.Bottom - height - _bottomOffset - _padding;
 
-            Left = x; Top = y; Width = width; Height = height;
+            Left = x;
+            Top = y;
+            Height = height;
             ApplyChrome();
         }
 
@@ -186,6 +214,44 @@ namespace Traycer
                 kv.Value.border.Margin = new Thickness(Math.Max(2, _padding / 2), 2, Math.Max(2, _padding / 2), 2);
                 kv.Value.border.CornerRadius = new CornerRadius(Math.Max(4, _cornerRadius / 2));
             }
+            UpdateWindowWidth();
+        }
+
+        private void UpdateWindowWidth()
+        {
+            if (RootBorder == null || WellsGrid == null) return;
+
+            double columnsWidth = 0;
+            foreach (var column in WellsGrid.ColumnDefinitions)
+            {
+                var length = column.Width;
+                if (length.IsAbsolute)
+                {
+                    columnsWidth += length.Value;
+                }
+                else if (column.ActualWidth > 0)
+                {
+                    columnsWidth += column.ActualWidth;
+                }
+            }
+
+            if (columnsWidth <= 0)
+            {
+                double actual = WellsGrid.ActualWidth;
+                if (!double.IsNaN(actual))
+                {
+                    columnsWidth = actual;
+                }
+            }
+
+            Thickness gridMargin = WellsGrid.Margin;
+            double tintedWidth = columnsWidth + gridMargin.Left + gridMargin.Right;
+
+            Thickness borderMargin = RootBorder.Margin;
+            double totalWidth = tintedWidth + borderMargin.Left + borderMargin.Right;
+
+            // Fit the chrome to the wells while keeping a reasonable minimum.
+            Width = Math.Max(80, totalWidth);
         }
 
         private (int edge, SD.Rectangle rect) GetTaskbarRect()
@@ -214,6 +280,18 @@ namespace Traycer
         // ===== Wells =====
         private record WellConfig(string id, double width);
 
+        private record TaskConfig(string Id, string Command, string? Arguments, string Mode, bool AutoStart, ScheduleConfig? Schedule, string? WorkingDirectory);
+        private record ScheduleConfig(string Frequency, int? Interval, string? Start);
+
+        private class ManagedTask
+        {
+            public ManagedTask(TaskConfig config) => Config = config;
+            public TaskConfig Config { get; private set; }
+            public Process? ActiveProcess { get; set; }
+            public bool IsScheduled => string.Equals(Config.Mode, "schedule", StringComparison.OrdinalIgnoreCase);
+            public void Update(TaskConfig config) => Config = config;
+        }
+
         private void ApplyConfig(IEnumerable<WellConfig> configs)
         {
             WellsGrid.ColumnDefinitions.Clear();
@@ -230,6 +308,8 @@ namespace Traycer
                 WellsGrid.Children.Add(border);
                 _wells[cfg.id] = (border, tb);
             }
+
+            RefreshTrayMenu();
         }
 
         private (Border border, TextBlock tb) CreateWellVisual(string id)
@@ -284,6 +364,7 @@ namespace Traycer
             WellsGrid.Children.Add(border);
             _wells[id] = (border, tb);
             ApplyChrome();
+            RefreshTrayMenu();
         }
 
         private void RemoveWell(string id)
@@ -302,6 +383,7 @@ namespace Traycer
                 if (c > col) Grid.SetColumn(child, c - 1);
             }
             ApplyChrome();
+            RefreshTrayMenu();
         }
 
         private void ResizeWell(string id, double width)
@@ -309,6 +391,7 @@ namespace Traycer
             int? col = GetColumnOf(id);
             if (col is null) return;
             WellsGrid.ColumnDefinitions[col.Value].Width = new GridLength(width);
+            UpdateWindowWidth();
         }
 
         private void OnWellClick(object sender, MouseButtonEventArgs e)
@@ -317,9 +400,36 @@ namespace Traycer
             if (sender is not Border b || b.Tag is not string id) return;
             if (!_actions.TryGetValue(id, out var action) || string.IsNullOrWhiteSpace(action)) return;
 
+            ExecuteActionCommand(action);
+        }
+
+        private void SetWell(string id, string? text = null, string? fg = null, string? bg = null, bool? blink = null, string? action = null)
+        {
+            if (!_wells.TryGetValue(id, out var tuple)) return;
+            var (border, tb) = tuple;
+
+            if (text is not null) tb.Text = text;
+            if (fg is not null && TryParseColor(fg, out var c)) tb.Foreground = new SolidColorBrush(c);
+            if (bg is not null && TryParseColor(bg, out var c2)) border.Background = new SolidColorBrush(c2);
+            if (blink is not null) tb.FontWeight = blink.Value ? FontWeights.Bold : FontWeights.SemiBold;
+            if (action is not null)
+            {
+                _actions[id] = action;
+                RefreshTrayMenu();
+            }
+        }
+
+        private void RunWellAction(string id)
+        {
+            if (!_actions.TryGetValue(id, out var action) || string.IsNullOrWhiteSpace(action)) return;
+            ExecuteActionCommand(action);
+        }
+
+        private void ExecuteActionCommand(string action)
+        {
             try
             {
-                if (action.Contains("://"))
+                if (action.Contains("://", StringComparison.OrdinalIgnoreCase))
                 {
                     var psi = new ProcessStartInfo { FileName = action, UseShellExecute = true };
                     Process.Start(psi);
@@ -338,24 +448,503 @@ namespace Traycer
             }
             catch (Exception ex)
             {
-                _tray.BalloonTipTitle = "Traycer HUD";
-                _tray.BalloonTipText = "Action failed: " + ex.Message;
-                _tray.ShowBalloonTip(1500);
+                ShowTrayMessage("Action failed: " + ex.Message);
             }
         }
 
-        private void SetWell(string id, string? text = null, string? fg = null, string? bg = null, bool? blink = null, string? action = null)
+        private void ShowTrayMessage(string text)
         {
-            if (!_wells.TryGetValue(id, out var tuple)) return;
-            var (border, tb) = tuple;
-
-            if (text is not null) tb.Text = text;
-            if (fg is not null && TryParseColor(fg, out var c)) tb.Foreground = new SolidColorBrush(c);
-            if (bg is not null && TryParseColor(bg, out var c2)) border.Background = new SolidColorBrush(c2);
-            if (blink is not null) tb.FontWeight = blink.Value ? FontWeights.Bold : FontWeights.SemiBold;
-            if (action is not null) _actions[id] = action;
+            try
+            {
+                _tray.BalloonTipTitle = "Traycer HUD";
+                _tray.BalloonTipText = text;
+                _tray.ShowBalloonTip(1500);
+            }
+            catch
+            {
+            }
         }
 
+        private void RefreshTrayMenu()
+        {
+            if (_trayMenu == null) return;
+
+            _trayMenu.SuspendLayout();
+            _trayMenu.Items.Clear();
+
+            _trayMenu.Items.Add(new WF.ToolStripMenuItem("Toggle Click-Through (Win+Alt+H)", null, (_, __) => ToggleClickThrough()));
+            _trayMenu.Items.Add(BuildWellsMenu());
+            _trayMenu.Items.Add(BuildTasksMenu());
+            _trayMenu.Items.Add(new WF.ToolStripSeparator());
+            _trayMenu.Items.Add(new WF.ToolStripMenuItem("Exit", null, (_, __) => Close()));
+
+            _trayMenu.ResumeLayout();
+        }
+
+        private WF.ToolStripMenuItem BuildWellsMenu()
+        {
+            var wellsMenu = new WF.ToolStripMenuItem("Wells");
+            if (_wells.Count == 0)
+            {
+                wellsMenu.Enabled = false;
+                return wellsMenu;
+            }
+
+            foreach (var id in _wells.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
+            {
+                var sub = new WF.ToolStripMenuItem(id);
+                var runItem = new WF.ToolStripMenuItem("Run action", null, (_, __) => RunWellAction(id))
+                {
+                    Enabled = _actions.TryGetValue(id, out var action) && !string.IsNullOrWhiteSpace(action)
+                };
+                var removeItem = new WF.ToolStripMenuItem("Remove", null, (_, __) => Dispatcher.Invoke(() => RemoveWell(id)));
+                sub.DropDownItems.Add(runItem);
+                sub.DropDownItems.Add(removeItem);
+                wellsMenu.DropDownItems.Add(sub);
+            }
+
+            return wellsMenu;
+        }
+
+        private WF.ToolStripMenuItem BuildTasksMenu()
+        {
+            var tasksMenu = new WF.ToolStripMenuItem("Tasks");
+            if (_tasks.Count == 0)
+            {
+                tasksMenu.Enabled = false;
+                return tasksMenu;
+            }
+
+            foreach (var task in _tasks.Values.OrderBy(t => t.Config.Id, StringComparer.OrdinalIgnoreCase))
+            {
+                tasksMenu.DropDownItems.Add(BuildTaskMenu(task));
+            }
+
+            return tasksMenu;
+        }
+
+        private WF.ToolStripMenuItem BuildTaskMenu(ManagedTask task)
+        {
+            var label = task.Config.Id;
+            if (task.IsScheduled)
+            {
+                label += " (scheduled)";
+            }
+            else if (task.ActiveProcess is { HasExited: false })
+            {
+                label += $" (running #{task.ActiveProcess.Id})";
+            }
+
+            var item = new WF.ToolStripMenuItem(label);
+            if (task.IsScheduled)
+            {
+                item.DropDownItems.Add(new WF.ToolStripMenuItem("Run now", null, (_, __) => RunScheduledTask(task.Config)));
+                item.DropDownItems.Add(new WF.ToolStripMenuItem("Stop", null, (_, __) => EndScheduledTask(task.Config)));
+            }
+            else
+            {
+                item.DropDownItems.Add(new WF.ToolStripMenuItem("Run now", null, (_, __) => StartTaskProcess(task, true)));
+                var kill = new WF.ToolStripMenuItem("Kill process", null, (_, __) => KillTaskProcess(task))
+                {
+                    Enabled = task.ActiveProcess is { HasExited: false }
+                };
+                item.DropDownItems.Add(kill);
+            }
+
+            return item;
+        }
+
+        private void StartTaskProcess(ManagedTask task, bool fromMenu)
+        {
+            if (task.ActiveProcess is { HasExited: false })
+            {
+                if (fromMenu)
+                {
+                    ShowTrayMessage($"Task '{task.Config.Id}' is already running.");
+                }
+                return;
+            }
+
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = task.Config.Command,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                if (!string.IsNullOrWhiteSpace(task.Config.Arguments))
+                {
+                    psi.Arguments = task.Config.Arguments;
+                }
+                if (!string.IsNullOrWhiteSpace(task.Config.WorkingDirectory))
+                {
+                    psi.WorkingDirectory = task.Config.WorkingDirectory!;
+                }
+                var proc = Process.Start(psi);
+                if (proc != null)
+                {
+                    proc.EnableRaisingEvents = true;
+                    proc.Exited += (_, __) => Dispatcher.Invoke(() =>
+                    {
+                        task.ActiveProcess = null;
+                        RefreshTrayMenu();
+                    });
+                    task.ActiveProcess = proc;
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowTrayMessage($"Task '{task.Config.Id}' failed: {ex.Message}");
+            }
+            finally
+            {
+                RefreshTrayMenu();
+            }
+        }
+
+        private void KillTaskProcess(ManagedTask task)
+        {
+            if (task.ActiveProcess is { HasExited: false } proc)
+            {
+                try
+                {
+                    proc.Kill(true);
+                }
+                catch (Exception ex)
+                {
+                    ShowTrayMessage($"Unable to kill '{task.Config.Id}': {ex.Message}");
+                }
+            }
+
+            task.ActiveProcess = null;
+            RefreshTrayMenu();
+        }
+
+        private void RunScheduledTask(TaskConfig config)
+        {
+            var exit = RunSchtasks($"/Run /TN \"Traycer\\{config.Id}\"", out var stdout, out var stderr);
+            if (exit != 0)
+            {
+                ShowTrayMessage($"Start '{config.Id}' failed: {FirstNonEmpty(stderr, stdout)}");
+            }
+        }
+
+        private void EndScheduledTask(TaskConfig config)
+        {
+            var exit = RunSchtasks($"/End /TN \"Traycer\\{config.Id}\"", out var stdout, out var stderr);
+            if (exit != 0)
+            {
+                ShowTrayMessage($"Stop '{config.Id}' failed: {FirstNonEmpty(stderr, stdout)}");
+            }
+        }
+
+        private void EnsureScheduledTask(TaskConfig config)
+        {
+            if (config.Schedule is null)
+            {
+                ShowTrayMessage($"Task '{config.Id}' missing schedule configuration.");
+                return;
+            }
+
+            var frequency = MapFrequency(config.Schedule.Frequency);
+            if (frequency is null)
+            {
+                ShowTrayMessage($"Task '{config.Id}' has unsupported schedule frequency '{config.Schedule.Frequency}'.");
+                return;
+            }
+
+            var commandLine = BuildCommandLine(config.Command, config.Arguments);
+            var fullName = $"Traycer\\{config.Id}";
+
+            RunSchtasks($"/Delete /TN \"{fullName}\" /F", out _, out _);
+
+            var args = new System.Text.StringBuilder();
+            args.Append($"/Create /F /TN \"{fullName}\" /TR \"{commandLine}\" /SC {frequency}");
+            if (config.Schedule.Interval.HasValue && AllowsModifier(frequency))
+            {
+                var interval = Math.Max(1, config.Schedule.Interval.Value);
+                args.Append($" /MO {interval}");
+            }
+            if (!string.IsNullOrWhiteSpace(config.Schedule.Start))
+            {
+                var start = config.Schedule.Start!.Trim();
+                if (TimeSpan.TryParse(start, CultureInfo.InvariantCulture, out _))
+                {
+                    args.Append($" /ST {start}");
+                }
+            }
+            args.Append(" /RL LIMITED");
+
+            var runUser = GetCurrentUserPrincipal();
+            if (!string.IsNullOrWhiteSpace(runUser))
+            {
+                args.Append($" /RU \"{runUser}\" /IT");
+            }
+
+            var exit = RunSchtasks(args.ToString(), out var stdout, out var stderr);
+            if (exit != 0)
+            {
+                ShowTrayMessage($"Scheduling '{config.Id}' failed: {FirstNonEmpty(stderr, stdout)}");
+                return;
+            }
+
+            if (config.AutoStart)
+            {
+                RunScheduledTask(config);
+            }
+        }
+
+        private void RemoveScheduledTask(TaskConfig config)
+        {
+            RunSchtasks($"/Delete /TN \"Traycer\\{config.Id}\" /F", out _, out _);
+        }
+
+        private void ApplyTasks(IEnumerable<TaskConfig> configs)
+        {
+            var incoming = configs.ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var existing in _tasks.Values.ToList())
+            {
+                if (!incoming.ContainsKey(existing.Config.Id))
+                {
+                    if (!existing.IsScheduled && existing.ActiveProcess is { HasExited: false })
+                    {
+                        try { existing.ActiveProcess.Kill(true); } catch { }
+                    }
+                    if (existing.IsScheduled)
+                    {
+                        RemoveScheduledTask(existing.Config);
+                    }
+                    _tasks.Remove(existing.Config.Id);
+                }
+            }
+
+            foreach (var cfg in incoming.Values)
+            {
+                if (!_tasks.TryGetValue(cfg.Id, out var managed))
+                {
+                    managed = new ManagedTask(cfg);
+                    _tasks[cfg.Id] = managed;
+                }
+                else if (!managed.Config.Equals(cfg))
+                {
+                    if (managed.IsScheduled)
+                    {
+                        RemoveScheduledTask(managed.Config);
+                    }
+                    else if (managed.ActiveProcess is { HasExited: false })
+                    {
+                        try { managed.ActiveProcess.Kill(true); } catch { }
+                        managed.ActiveProcess = null;
+                    }
+                    managed.Update(cfg);
+                }
+            }
+
+            foreach (var task in _tasks.Values)
+            {
+                if (task.IsScheduled)
+                {
+                    EnsureScheduledTask(task.Config);
+                }
+                else if (task.Config.AutoStart)
+                {
+                    StartTaskProcess(task, false);
+                }
+            }
+
+            RefreshTrayMenu();
+        }
+
+        private List<TaskConfig> ParseTaskConfigs(JsonElement tasksEl)
+        {
+            var list = new List<TaskConfig>();
+            foreach (var element in tasksEl.EnumerateArray())
+            {
+                var cfg = ParseTaskConfig(element);
+                if (cfg != null)
+                {
+                    list.Add(cfg);
+                }
+            }
+            return list;
+        }
+
+        private TaskConfig? ParseTaskConfig(JsonElement element)
+        {
+            if (!element.TryGetProperty("id", out var idEl)) return null;
+            var id = idEl.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(id)) return null;
+
+            if (!element.TryGetProperty("command", out var cmdEl)) return null;
+            var command = cmdEl.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(command)) return null;
+            command = ResolveExecutablePath(command);
+
+            string? arguments = element.TryGetProperty("args", out var argsEl) ? argsEl.GetString() : null;
+            if (!string.IsNullOrWhiteSpace(arguments))
+            {
+                arguments = Environment.ExpandEnvironmentVariables(arguments);
+            }
+            string mode = element.TryGetProperty("mode", out var modeEl) ? modeEl.GetString() ?? "once" : "once";
+            bool autoStart = true;
+            if (element.TryGetProperty("autoStart", out var autoEl))
+            {
+                if (autoEl.ValueKind == JsonValueKind.True) autoStart = true;
+                else if (autoEl.ValueKind == JsonValueKind.False) autoStart = false;
+                else if (autoEl.ValueKind == JsonValueKind.String && bool.TryParse(autoEl.GetString(), out var parsed)) autoStart = parsed;
+            }
+            string? workingDirectory = element.TryGetProperty("workingDirectory", out var wdEl) ? wdEl.GetString() : null;
+            workingDirectory = ResolveWorkingDirectory(workingDirectory);
+
+            ScheduleConfig? schedule = null;
+            if (string.Equals(mode, "schedule", StringComparison.OrdinalIgnoreCase) && element.TryGetProperty("schedule", out var schedEl) && schedEl.ValueKind == JsonValueKind.Object)
+            {
+                string frequency = schedEl.TryGetProperty("frequency", out var freqEl) ? freqEl.GetString() ?? string.Empty : string.Empty;
+                int? interval = null;
+                if (schedEl.TryGetProperty("interval", out var intEl))
+                {
+                    if (intEl.ValueKind == JsonValueKind.Number && intEl.TryGetInt32(out var val)) interval = val;
+                    else if (intEl.ValueKind == JsonValueKind.String && int.TryParse(intEl.GetString(), out val)) interval = val;
+                }
+                string? start = schedEl.TryGetProperty("start", out var startEl) ? startEl.GetString() : null;
+                schedule = new ScheduleConfig(frequency, interval, start);
+            }
+
+            return new TaskConfig(id, command, arguments, mode, autoStart, schedule, workingDirectory);
+        }
+
+        private static int RunSchtasks(string arguments, out string stdout, out string stderr)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "schtasks.exe",
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var proc = Process.Start(psi);
+            if (proc == null)
+            {
+                stdout = string.Empty;
+                stderr = "Unable to start schtasks.exe";
+                return -1;
+            }
+
+            stdout = proc.StandardOutput.ReadToEnd();
+            stderr = proc.StandardError.ReadToEnd();
+            proc.WaitForExit();
+            return proc.ExitCode;
+        }
+
+        private static string BuildCommandLine(string command, string? arguments)
+        {
+            var quoted = Quote(command);
+            if (string.IsNullOrWhiteSpace(arguments)) return quoted;
+            return $"{quoted} {arguments}";
+        }
+
+        private static string Quote(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "\"\"";
+            if (!value.Any(char.IsWhiteSpace) && !value.Contains('"')) return value;
+            var escaped = value.Replace("\"", "\\\"");
+            return $"\"{escaped}\"";
+        }
+
+        private static bool AllowsModifier(string frequency)
+            => frequency is "MINUTE" or "HOURLY" or "DAILY";
+
+        private static string? MapFrequency(string? frequency)
+        {
+            if (string.IsNullOrWhiteSpace(frequency)) return null;
+            return frequency.Trim().ToLowerInvariant() switch
+            {
+                "minute" or "minutes" => "MINUTE",
+                "hour" or "hours" or "hourly" => "HOURLY",
+                "day" or "days" or "daily" => "DAILY",
+                "logon" or "onlogon" => "ONLOGON",
+                "once" => "ONCE",
+                _ => null
+            };
+        }
+
+        private static string FirstNonEmpty(string? primary, string? fallback)
+            => !string.IsNullOrWhiteSpace(primary) ? primary! : (!string.IsNullOrWhiteSpace(fallback) ? fallback! : string.Empty);
+
+        private static string ResolveExecutablePath(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command)) return command;
+            var expanded = Environment.ExpandEnvironmentVariables(command);
+            if (Path.IsPathRooted(expanded)) return Path.GetFullPath(expanded);
+
+            var baseDirCandidate = Path.Combine(AppContext.BaseDirectory, expanded);
+            if (File.Exists(baseDirCandidate)) return Path.GetFullPath(baseDirCandidate);
+
+            var search = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                foreach (var fragment in search.Split(Path.PathSeparator))
+                {
+                    if (string.IsNullOrWhiteSpace(fragment)) continue;
+                    try
+                    {
+                        var candidate = Path.Combine(fragment.Trim(), expanded);
+                        if (File.Exists(candidate)) return Path.GetFullPath(candidate);
+                        if (!expanded.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var exeCandidate = candidate + ".exe";
+                            if (File.Exists(exeCandidate)) return Path.GetFullPath(exeCandidate);
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            if (!expanded.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                var exeCandidate = expanded + ".exe";
+                var exeInBase = Path.Combine(AppContext.BaseDirectory, exeCandidate);
+                if (File.Exists(exeInBase)) return Path.GetFullPath(exeInBase);
+            }
+
+            return expanded;
+        }
+
+        private static string? ResolveWorkingDirectory(string? workingDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(workingDirectory)) return null;
+            var expanded = Environment.ExpandEnvironmentVariables(workingDirectory);
+            if (!Path.IsPathRooted(expanded))
+            {
+                expanded = Path.Combine(AppContext.BaseDirectory, expanded);
+            }
+            try { return Path.GetFullPath(expanded); }
+            catch { return workingDirectory; }
+        }
+
+        private static string? GetCurrentUserPrincipal()
+        {
+            try
+            {
+                var user = Environment.UserName;
+                if (string.IsNullOrWhiteSpace(user)) return null;
+                var domain = Environment.UserDomainName;
+                if (!string.IsNullOrWhiteSpace(domain) && !string.Equals(domain, user, StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"{domain}\\{user}";
+                }
+                return user;
+            }
+            catch
+            {
+                return null;
+            }
+        }
         private static bool TryParseColor(string hex, out System.Windows.Media.Color color)
         {
             try
@@ -420,16 +1009,38 @@ namespace Traycer
 
             if (op.Equals("config", StringComparison.OrdinalIgnoreCase))
             {
+                List<WellConfig>? wells = null;
                 if (msg.TryGetProperty("wells", out var wellsEl) && wellsEl.ValueKind == JsonValueKind.Array)
                 {
-                    var list = new List<WellConfig>();
+                    wells = new List<WellConfig>();
                     foreach (var w in wellsEl.EnumerateArray())
                     {
                         var id = w.GetProperty("id").GetString() ?? "";
                         var width = w.TryGetProperty("width", out var widEl) ? widEl.GetDouble() : 200.0;
-                        list.Add(new WellConfig(id, width));
+                        wells.Add(new WellConfig(id, width));
                     }
-                    Dispatcher.Invoke(() => { ApplyConfig(list); ApplyChrome(); });
+                }
+
+                List<TaskConfig>? tasks = null;
+                if (msg.TryGetProperty("tasks", out var tasksEl) && tasksEl.ValueKind == JsonValueKind.Array)
+                {
+                    tasks = ParseTaskConfigs(tasksEl);
+                }
+
+                if (wells != null || tasks != null)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (wells != null)
+                        {
+                            ApplyConfig(wells);
+                            ApplyChrome();
+                        }
+                        if (tasks != null)
+                        {
+                            ApplyTasks(tasks);
+                        }
+                    });
                 }
             }
             else if (op.Equals("add", StringComparison.OrdinalIgnoreCase))
@@ -483,7 +1094,11 @@ namespace Traycer
             {
                 string id = msg.GetProperty("well").GetString() ?? "";
                 string action = msg.GetProperty("action").GetString() ?? "";
-                Dispatcher.Invoke(() => { _actions[id] = action; });
+                Dispatcher.Invoke(() =>
+                {
+                    _actions[id] = action;
+                    RefreshTrayMenu();
+                });
             }
             else if (op.Equals("placement", StringComparison.OrdinalIgnoreCase))
             {
@@ -531,16 +1146,23 @@ namespace Traycer
 
         // === Default config ===
         private const string DEFAULTS_FILE = "traycer.defaults.json";
-        private bool TryLoadDefaults()
+        private bool TryLoadDefaults(out string? error)
         {
+            error = null;
             try
             {
                 string? path = FindDefaultsFile();
-                if (path is null) return false;
+                if (path is null)
+                {
+                    error = "Traycer defaults file not found.";
+                    return false;
+                }
 
                 var json = File.ReadAllText(path, Encoding.UTF8);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
+
+                List<TaskConfig>? tasks = null;
 
                 // 1) placement
                 if (root.TryGetProperty("placement", out var p) && p.ValueKind == JsonValueKind.Object)
@@ -587,7 +1209,13 @@ namespace Traycer
                     }
                 }
 
-                // 4) optional standalone actions map: { "actions": { "wellId": "cmd or url", ... } }
+                // 4) optional background tasks
+                if (root.TryGetProperty("tasks", out var tasksEl) && tasksEl.ValueKind == JsonValueKind.Array)
+                {
+                    tasks = ParseTaskConfigs(tasksEl);
+                }
+
+                // 5) optional standalone actions map: { "actions": { "wellId": "cmd or url", ... } }
                 if (root.TryGetProperty("actions", out var actsEl) && actsEl.ValueKind == JsonValueKind.Object)
                 {
                     foreach (var prop in actsEl.EnumerateObject())
@@ -596,15 +1224,18 @@ namespace Traycer
                     }
                 }
 
+                ApplyTasks(tasks ?? Enumerable.Empty<TaskConfig>());
                 ApplyChrome();
+                RefreshTrayMenu();
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                // If the file is present but invalid, fail soft and continue with built-ins
+                error = $"Failed to load defaults: {ex.Message}";
                 return false;
             }
         }
+
 
         private static string? FindDefaultsFile()
         {
