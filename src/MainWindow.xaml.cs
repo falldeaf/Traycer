@@ -91,8 +91,13 @@ namespace Traycer
         {
             InitializeComponent();
 
-            // Try defaults file; if not present, fall back to built-ins
-            if (!TryLoadDefaults(out var error))
+            if (!TryEnsureDefaultsFile(out var defaultsPath) || string.IsNullOrWhiteSpace(defaultsPath))
+            {
+                Environment.Exit(1);
+                return;
+            }
+
+            if (!TryLoadDefaults(defaultsPath, out var error))
             {
                 var message = string.IsNullOrWhiteSpace(error) ? "Traycer could not load its defaults file." : error;
                 try { Console.Error.WriteLine(message); } catch { }
@@ -798,6 +803,12 @@ namespace Traycer
             string? workingDirectory = element.TryGetProperty("workingDirectory", out var wdEl) ? wdEl.GetString() : null;
             workingDirectory = ResolveWorkingDirectory(workingDirectory);
 
+            if (string.Equals(mode, "schedule", StringComparison.OrdinalIgnoreCase))
+            {
+                var hidden = MaybeSwapPythonForPythonw(command);
+                if (!string.IsNullOrWhiteSpace(hidden)) command = hidden!;
+            }
+
             ScheduleConfig? schedule = null;
             if (string.Equals(mode, "schedule", StringComparison.OrdinalIgnoreCase) && element.TryGetProperty("schedule", out var schedEl) && schedEl.ValueKind == JsonValueKind.Object)
             {
@@ -925,6 +936,28 @@ namespace Traycer
             }
             try { return Path.GetFullPath(expanded); }
             catch { return workingDirectory; }
+        }
+
+        private static string? MaybeSwapPythonForPythonw(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command)) return null;
+            var file = Path.GetFileName(command);
+            if (!string.Equals(file, "python.exe", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(file, "python", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+            try
+            {
+                var dir = Path.GetDirectoryName(command);
+                if (string.IsNullOrWhiteSpace(dir)) return null;
+                var candidate = Path.Combine(dir, "pythonw.exe");
+                return File.Exists(candidate) ? candidate : null;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static string? GetCurrentUserPrincipal()
@@ -1146,15 +1179,79 @@ namespace Traycer
 
         // === Default config ===
         private const string DEFAULTS_FILE = "traycer.defaults.json";
-        private bool TryLoadDefaults(out string? error)
+
+        private static string GetLocalDefaultsDirectory()
+        {
+            var baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return Path.Combine(baseDir, "Traycer");
+        }
+
+        private static string GetLocalDefaultsPath()
+        {
+            return Path.Combine(GetLocalDefaultsDirectory(), DEFAULTS_FILE);
+        }
+
+        private bool TryEnsureDefaultsFile(out string? path)
+        {
+            path = GetLocalDefaultsPath();
+
+            try
+            {
+                if (File.Exists(path))
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Traycer could not verify its configuration path: {ex.Message}", "Traycer", MessageBoxButton.OK, MessageBoxImage.Error);
+                path = null;
+                return false;
+            }
+
+            var prompt = $"Traycer configuration file was not found at:{Environment.NewLine}{path}{Environment.NewLine}{Environment.NewLine}Would you like to create a template now?";
+            var result = System.Windows.MessageBox.Show(prompt, "Traycer", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes)
+            {
+                System.Windows.MessageBox.Show("Traycer cannot start without a configuration file.", "Traycer", MessageBoxButton.OK, MessageBoxImage.Information);
+                path = null;
+                return false;
+            }
+
+            try
+            {
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                var templateSource = Path.Combine(AppContext.BaseDirectory, DEFAULTS_FILE);
+                if (!File.Exists(templateSource))
+                {
+                    throw new FileNotFoundException("Template defaults file not found beside the application executable.", templateSource);
+                }
+
+                File.Copy(templateSource, path, overwrite: false);
+                System.Windows.MessageBox.Show($"Traycer created a configuration template at:{Environment.NewLine}{path}", "Traycer", MessageBoxButton.OK, MessageBoxImage.Information);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Traycer could not create a configuration template: {ex.Message}", "Traycer", MessageBoxButton.OK, MessageBoxImage.Error);
+                path = null;
+                return false;
+            }
+        }
+
+        private bool TryLoadDefaults(string path, out string? error)
         {
             error = null;
             try
             {
-                string? path = FindDefaultsFile();
-                if (path is null)
+                if (!File.Exists(path))
                 {
-                    error = "Traycer defaults file not found.";
+                    error = $"Traycer defaults file not found at {path}.";
                     return false;
                 }
 
@@ -1236,25 +1333,6 @@ namespace Traycer
             }
         }
 
-
-        private static string? FindDefaultsFile()
-        {
-            try
-            {
-                // 1) beside the EXE
-                var exeDir = AppContext.BaseDirectory;
-                var p1 = Path.Combine(exeDir, DEFAULTS_FILE);
-                if (File.Exists(p1)) return p1;
-
-                // 2) %LOCALAPPDATA%\Traycer\defaults.json
-                var p2 = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Traycer", "defaults.json");
-                if (File.Exists(p2)) return p2;
-            }
-            catch { }
-            return null;
-        }
 
     }
 }
