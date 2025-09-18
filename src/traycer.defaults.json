@@ -9,7 +9,7 @@
     {
       "id": "weather-refresh",
       "command": "python",
-      "args": "\"C:\\projects\\git\\Traycer\\weather.py\" 39.95238 -75.16362",
+      "args": "\"C:\\projects\\git\\Traycer\\scripts\\weather.py\" 39.95238 -75.16362",
       "mode": "schedule",
       "autoStart": true,
       "schedule": {
@@ -20,7 +20,7 @@
         {
       "id": "calendar-refresh",
       "command": "python",
-      "args": "\"C:\\projects\\git\\Traycer\\calendar_overview.py\" \"https://calendar.google.com/calendar/ical/thomas.mardis%40simxar.com/private-c5733251a4bd03b4df0f6514eaa5ffdd/basic.ics\"",
+      "args": "\"C:\\projects\\git\\Traycer\\scripts\\calendar_overview.py\" \"https://calendar.google.com/calendar/ical/thomas.mardis%40simxar.com/private-c5733251a4bd03b4df0f6514eaa5ffdd/basic.ics\"",
       "mode": "schedule",
       "autoStart": true,
       "schedule": {
