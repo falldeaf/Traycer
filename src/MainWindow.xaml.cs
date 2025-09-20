@@ -449,7 +449,8 @@ namespace Traycer
                         FileName = "cmd.exe",
                         Arguments = "/c " + action,
                         UseShellExecute = false,
-                        CreateNoWindow = true
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden
                     };
                     Process.Start(psi);
                 }

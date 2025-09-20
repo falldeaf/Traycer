@@ -19,8 +19,8 @@
     },
     {
       "id": "build-stats",
-      "command": "C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe",
-      "args": "-NoProfile -WindowStyle Hidden -File \\\"C:\\\\projects\\\\git\\\\Traycer\\\\scripts\\\\build_stats.ps1\\\" -RepoDir \\\"C:\\\\projects\\\\SimX\\\\unity-client\\\" -Branch dev",
+      "command": "pythonw",
+      "args": "\"C:\\projects\\git\\Traycer\\scripts\\build_stats.py\" --repo-dir \"C:\\projects\\SimX\\unity-client\" --branch dev",
       "mode": "schedule",
       "autoStart": true,
       "schedule": {
