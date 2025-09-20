@@ -1,5 +1,6 @@
 // MainWindow.xaml.cs
 using Microsoft.Win32;
+using Microsoft.Win32.TaskScheduler;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -68,7 +69,7 @@ namespace Traycer
         private IntPtr _hwnd;
 
         private readonly CancellationTokenSource _cts = new();
-        private Task? _pipeTask;
+        private System.Threading.Tasks.Task? _pipeTask;
 
         // wellId -> UI controls
         private readonly Dictionary<string, (Border border, TextBlock text)> _wells = new();
@@ -153,7 +154,7 @@ namespace Traycer
             _topmostTimer.Tick += (_, __) => ReassertTopmost();
             _topmostTimer.Start();
 
-            _pipeTask = Task.Run(PipeLoopAsync);
+            _pipeTask = System.Threading.Tasks.Task.Run(PipeLoopAsync);
         }
 
         private void OnClosed(object? sender, EventArgs e)
@@ -284,6 +285,8 @@ namespace Traycer
 
         // ===== Wells =====
         private record WellConfig(string id, double width);
+        private const string TraycerTaskFolderName = "Traycer";
+        private const string TraycerTaskFolderPath = @"\Traycer";
 
         private record TaskConfig(string Id, string Command, string? Arguments, string Mode, bool AutoStart, ScheduleConfig? Schedule, string? WorkingDirectory);
         private record ScheduleConfig(string Frequency, int? Interval, string? Start);
@@ -628,19 +631,55 @@ namespace Traycer
 
         private void RunScheduledTask(TaskConfig config)
         {
-            var exit = RunSchtasks($"/Run /TN \"Traycer\\{config.Id}\"", out var stdout, out var stderr);
-            if (exit != 0)
+            try
             {
-                ShowTrayMessage($"Start '{config.Id}' failed: {FirstNonEmpty(stderr, stdout)}");
+                using var service = new TaskService();
+                var folder = GetTraycerFolder(service, createIfMissing: false, out var error);
+                if (folder is null)
+                {
+                    ShowTrayMessage($"Start '{config.Id}' failed: {error ?? "Task folder not found."}");
+                    return;
+                }
+
+                var task = folder.Tasks.FirstOrDefault(t => string.Equals(t.Name, config.Id, StringComparison.OrdinalIgnoreCase));
+                if (task is null)
+                {
+                    ShowTrayMessage($"Start '{config.Id}' failed: task not found.");
+                    return;
+                }
+
+                task.Run();
+            }
+            catch (Exception ex)
+            {
+                ShowTrayMessage($"Start '{config.Id}' failed: {ex.Message}");
             }
         }
 
         private void EndScheduledTask(TaskConfig config)
         {
-            var exit = RunSchtasks($"/End /TN \"Traycer\\{config.Id}\"", out var stdout, out var stderr);
-            if (exit != 0)
+            try
             {
-                ShowTrayMessage($"Stop '{config.Id}' failed: {FirstNonEmpty(stderr, stdout)}");
+                using var service = new TaskService();
+                var folder = GetTraycerFolder(service, createIfMissing: false, out var error);
+                if (folder is null)
+                {
+                    ShowTrayMessage($"Stop '{config.Id}' failed: {error ?? "Task folder not found."}");
+                    return;
+                }
+
+                var task = folder.Tasks.FirstOrDefault(t => string.Equals(t.Name, config.Id, StringComparison.OrdinalIgnoreCase));
+                if (task is null)
+                {
+                    ShowTrayMessage($"Stop '{config.Id}' failed: task not found.");
+                    return;
+                }
+
+                task.Stop();
+            }
+            catch (Exception ex)
+            {
+                ShowTrayMessage($"Stop '{config.Id}' failed: {ex.Message}");
             }
         }
 
@@ -652,45 +691,48 @@ namespace Traycer
                 return;
             }
 
-            var frequency = MapFrequency(config.Schedule.Frequency);
-            if (frequency is null)
+            if (!TryCreateTrigger(config, out var trigger, out var frequencyError))
             {
-                ShowTrayMessage($"Task '{config.Id}' has unsupported schedule frequency '{config.Schedule.Frequency}'.");
+                ShowTrayMessage($"Task '{config.Id}' has unsupported schedule frequency '{frequencyError}'.");
                 return;
             }
 
-            var commandLine = BuildCommandLine(config.Command, config.Arguments);
-            var fullName = $"Traycer\\{config.Id}";
-
-            RunSchtasks($"/Delete /TN \"{fullName}\" /F", out _, out _);
-
-            var args = new System.Text.StringBuilder();
-            args.Append($"/Create /F /TN \"{fullName}\" /TR \"{commandLine}\" /SC {frequency}");
-            if (config.Schedule.Interval.HasValue && AllowsModifier(frequency))
+            try
             {
-                var interval = Math.Max(1, config.Schedule.Interval.Value);
-                args.Append($" /MO {interval}");
-            }
-            if (!string.IsNullOrWhiteSpace(config.Schedule.Start))
-            {
-                var start = config.Schedule.Start!.Trim();
-                if (TimeSpan.TryParse(start, CultureInfo.InvariantCulture, out _))
+                using var service = new TaskService();
+                var folder = GetTraycerFolder(service, createIfMissing: true, out var folderError);
+                if (folder is null)
                 {
-                    args.Append($" /ST {start}");
+                    ShowTrayMessage($"Scheduling '{config.Id}' failed: {folderError ?? "Unable to access Task Scheduler."}");
+                    return;
                 }
-            }
-            args.Append(" /RL LIMITED");
 
-            var runUser = GetCurrentUserPrincipal();
-            if (!string.IsNullOrWhiteSpace(runUser))
-            {
-                args.Append($" /RU \"{runUser}\" /IT");
-            }
+                var definition = service.NewTask();
+                definition.RegistrationInfo.Description = $"Traycer scheduled task '{config.Id}'";
+                definition.Settings.Enabled = true;
+                definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
+                definition.Settings.DisallowStartIfOnBatteries = false;
+                definition.Settings.StopIfGoingOnBatteries = false;
+                definition.Settings.StartWhenAvailable = true;
+                definition.Settings.ExecutionTimeLimit = TimeSpan.Zero;
 
-            var exit = RunSchtasks(args.ToString(), out var stdout, out var stderr);
-            if (exit != 0)
+                var action = new ExecAction(config.Command, config.Arguments, config.WorkingDirectory);
+                definition.Actions.Add(action);
+                definition.Triggers.Add(trigger);
+
+                var user = GetCurrentUserPrincipal();
+                definition.Principal.LogonType = TaskLogonType.InteractiveToken;
+                definition.Principal.RunLevel = TaskRunLevel.LUA;
+                if (!string.IsNullOrWhiteSpace(user))
+                {
+                    definition.Principal.UserId = user;
+                }
+
+                folder.RegisterTaskDefinition(config.Id, definition, TaskCreation.CreateOrUpdate, string.IsNullOrWhiteSpace(user) ? null : user, null, TaskLogonType.InteractiveToken);
+            }
+            catch (Exception ex)
             {
-                ShowTrayMessage($"Scheduling '{config.Id}' failed: {FirstNonEmpty(stderr, stdout)}");
+                ShowTrayMessage($"Scheduling '{config.Id}' failed: {ex.Message}");
                 return;
             }
 
@@ -702,7 +744,131 @@ namespace Traycer
 
         private void RemoveScheduledTask(TaskConfig config)
         {
-            RunSchtasks($"/Delete /TN \"Traycer\\{config.Id}\" /F", out _, out _);
+            try
+            {
+                using var service = new TaskService();
+                var folder = GetTraycerFolder(service, createIfMissing: false, out _);
+                folder?.DeleteTask(config.Id, false);
+            }
+            catch
+            {
+            }
+        }
+
+        private static TaskFolder? GetTraycerFolder(TaskService service, bool createIfMissing, out string? error)
+        {
+            error = null;
+            TaskFolder? folder = null;
+            try
+            {
+                folder = service.GetFolder(TraycerTaskFolderPath);
+            }
+            catch (Exception ex)
+            {
+                if (!IsMissingFolderException(ex))
+                {
+                    error = ex.Message;
+                    return null;
+                }
+            }
+
+            if (folder is not null)
+            {
+                return folder;
+            }
+
+            if (!createIfMissing)
+            {
+                return null;
+            }
+
+            try
+            {
+                return service.RootFolder.CreateFolder(TraycerTaskFolderName);
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return null;
+            }
+        }
+
+        private static bool IsMissingFolderException(Exception ex)
+        {
+            return ex is FileNotFoundException
+                || ex is DirectoryNotFoundException
+                || ex is IOException ioEx && (ioEx.HResult == unchecked((int)0x80070002) || ioEx.HResult == unchecked((int)0x80070003))
+                || ex is COMException comEx && (comEx.ErrorCode == unchecked((int)0x80070002) || comEx.ErrorCode == unchecked((int)0x80070003));
+        }
+
+        private static bool TryCreateTrigger(TaskConfig config, out Microsoft.Win32.TaskScheduler.Trigger? trigger, out string? error)
+        {
+            trigger = null;
+            error = null;
+
+            var schedule = config.Schedule!;
+            var frequency = schedule.Frequency?.Trim().ToLowerInvariant();
+            var startBoundary = ResolveStartBoundary(schedule);
+
+            switch (frequency)
+            {
+                case "minute":
+                case "minutes":
+                {
+                    var interval = Math.Max(1, schedule.Interval ?? 1);
+                    var trig = new DailyTrigger { DaysInterval = 1, StartBoundary = startBoundary };
+                    trig.Repetition.Interval = TimeSpan.FromMinutes(interval);
+                    trig.Repetition.Duration = TimeSpan.FromDays(1);
+                    trig.Repetition.StopAtDurationEnd = false;
+                    trigger = trig;
+                    return true;
+                }
+                case "hour":
+                case "hours":
+                case "hourly":
+                {
+                    var interval = Math.Max(1, schedule.Interval ?? 1);
+                    var trig = new DailyTrigger { DaysInterval = 1, StartBoundary = startBoundary };
+                    trig.Repetition.Interval = TimeSpan.FromHours(interval);
+                    trig.Repetition.Duration = TimeSpan.FromDays(1);
+                    trig.Repetition.StopAtDurationEnd = false;
+                    trigger = trig;
+                    return true;
+                }
+                case "day":
+                case "days":
+                case "daily":
+                {
+                    var interval = Math.Max(1, schedule.Interval ?? 1);
+                    trigger = new DailyTrigger
+                    {
+                        DaysInterval = (short)Math.Min(interval, short.MaxValue),
+                        StartBoundary = startBoundary
+                    };
+                    return true;
+                }
+                case "logon":
+                case "onlogon":
+                    trigger = new LogonTrigger();
+                    return true;
+                case "once":
+                    trigger = new TimeTrigger { StartBoundary = startBoundary };
+                    return true;
+                default:
+                    error = schedule.Frequency;
+                    return false;
+            }
+        }
+
+        private static DateTime ResolveStartBoundary(ScheduleConfig schedule)
+        {
+            if (!string.IsNullOrWhiteSpace(schedule.Start) && TimeSpan.TryParse(schedule.Start, CultureInfo.InvariantCulture, out var timeOfDay))
+            {
+                var today = DateTime.Today.Add(timeOfDay);
+                return today > DateTime.Now ? today : today.AddDays(1);
+            }
+
+            return DateTime.Now.AddMinutes(1);
         }
 
         private void ApplyTasks(IEnumerable<TaskConfig> configs)
@@ -826,66 +992,6 @@ namespace Traycer
             return new TaskConfig(id, command, arguments, mode, autoStart, schedule, workingDirectory);
         }
 
-        private static int RunSchtasks(string arguments, out string stdout, out string stderr)
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "schtasks.exe",
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using var proc = Process.Start(psi);
-            if (proc == null)
-            {
-                stdout = string.Empty;
-                stderr = "Unable to start schtasks.exe";
-                return -1;
-            }
-
-            stdout = proc.StandardOutput.ReadToEnd();
-            stderr = proc.StandardError.ReadToEnd();
-            proc.WaitForExit();
-            return proc.ExitCode;
-        }
-
-        private static string BuildCommandLine(string command, string? arguments)
-        {
-            var quoted = Quote(command);
-            if (string.IsNullOrWhiteSpace(arguments)) return quoted;
-            return $"{quoted} {arguments}";
-        }
-
-        private static string Quote(string value)
-        {
-            if (string.IsNullOrEmpty(value)) return "\"\"";
-            if (!value.Any(char.IsWhiteSpace) && !value.Contains('"')) return value;
-            var escaped = value.Replace("\"", "\\\"");
-            return $"\"{escaped}\"";
-        }
-
-        private static bool AllowsModifier(string frequency)
-            => frequency is "MINUTE" or "HOURLY" or "DAILY";
-
-        private static string? MapFrequency(string? frequency)
-        {
-            if (string.IsNullOrWhiteSpace(frequency)) return null;
-            return frequency.Trim().ToLowerInvariant() switch
-            {
-                "minute" or "minutes" => "MINUTE",
-                "hour" or "hours" or "hourly" => "HOURLY",
-                "day" or "days" or "daily" => "DAILY",
-                "logon" or "onlogon" => "ONLOGON",
-                "once" => "ONCE",
-                _ => null
-            };
-        }
-
-        private static string FirstNonEmpty(string? primary, string? fallback)
-            => !string.IsNullOrWhiteSpace(primary) ? primary! : (!string.IsNullOrWhiteSpace(fallback) ? fallback! : string.Empty);
 
         private static string ResolveExecutablePath(string command)
         {
@@ -1012,7 +1118,7 @@ namespace Traycer
         // ===== IPC =====
         private const string PIPE_NAME = "TraycerHud";
 
-        private async Task PipeLoopAsync()
+        private async System.Threading.Tasks.Task PipeLoopAsync()
         {
             while (!_cts.IsCancellationRequested)
             {
@@ -1032,7 +1138,7 @@ namespace Traycer
                     }
                 }
                 catch when (_cts.IsCancellationRequested) { }
-                catch { await Task.Delay(200); }
+                catch { await System.Threading.Tasks.Task.Delay(200); }
             }
         }
 

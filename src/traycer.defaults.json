@@ -8,7 +8,7 @@
   "tasks": [
     {
       "id": "weather-refresh",
-      "command": "python",
+      "command": "pythonw",
       "args": "\"C:\\projects\\git\\Traycer\\scripts\\weather.py\" 39.95238 -75.16362",
       "mode": "schedule",
       "autoStart": true,
@@ -17,10 +17,10 @@
         "interval": 30
       }
     },
-        {
-      "id": "calendar-refresh",
-      "command": "python",
-      "args": "\"C:\\projects\\git\\Traycer\\scripts\\calendar_overview.py\" \"https://calendar.google.com/calendar/ical/thomas.mardis%40simxar.com/private-c5733251a4bd03b4df0f6514eaa5ffdd/basic.ics\"",
+    {
+      "id": "build-stats",
+      "command": "C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe",
+      "args": "-NoProfile -WindowStyle Hidden -File \\\"C:\\\\projects\\\\git\\\\Traycer\\\\scripts\\\\build_stats.ps1\\\" -RepoDir \\\"C:\\\\projects\\\\SimX\\\\unity-client\\\" -Branch dev",
       "mode": "schedule",
       "autoStart": true,
       "schedule": {
