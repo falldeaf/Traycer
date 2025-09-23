@@ -1,0 +1,54 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../src",
+          "files": [
+            "Traycer.csproj"
+          ]
+        }
+      ],
+      "dest": "api"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "api/**.yml"
+        ]
+      },
+      {
+        "files": [
+          "articles/**.md",
+          "index.md"
+        ]
+      },
+      {
+        "files": [
+          "articles/toc.yml",
+          "toc.yml"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "images/**"
+        ]
+      }
+    ],
+    "globalMetadata": {
+      "_appTitle": "Traycer HUD",
+      "_appFooter": "Traycer HUD Documentation",
+      "_enableSearch": true,
+      "_disableNavbar": true
+    },
+    "template": [
+      "statictoc",
+      "default"
+    ],
+    "dest": "_site"
+  }
+}

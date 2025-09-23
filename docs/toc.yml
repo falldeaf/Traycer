@@ -1,0 +1,11 @@
+- name: Documentation
+  href: index.md
+  items:
+    - name: Overview
+      href: index.md
+    - name: Getting Started
+      href: articles/getting-started.md
+    - name: IPC JSON Protocol
+      href: articles/ipc-protocol.md
+    - name: API Reference
+      href: api/toc.yml
