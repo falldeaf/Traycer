@@ -1,4 +1,6 @@
-[] better tray icon
-[] menu link to Traycer in windows scheduler if possible
 [] Some unity Editor script to show a useful state?
-[] 
+[] refactor monolithic main code
+[] update readme to be more introcution like
+[] move readme content to docs area
+[x] better tray icon
+[x] menu link to Traycer in windows scheduler if possible
