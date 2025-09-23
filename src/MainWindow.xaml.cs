@@ -11,6 +11,9 @@ using SD = System.Drawing;
 
 namespace Traycer
 {
+    /// <summary>
+    /// Hosts the Traycer HUD window and delegates platform helpers.
+    /// </summary>
     public partial class MainWindow : Window
     {
         private readonly SD.Icon? _trayIcon;
@@ -33,6 +36,9 @@ namespace Traycer
 
         private System.Windows.Threading.DispatcherTimer? _topmostTimer;
 
+        /// <summary>
+        /// Creates the HUD shell and seeds configuration.
+        /// </summary>
         public MainWindow()
         {
             InitializeComponent();
@@ -88,6 +94,11 @@ namespace Traycer
             ApplyChrome();
         }
 
+        /// <summary>
+        /// Handles WPF load to finalize interop and IPC wiring.
+        /// </summary>
+        /// <param name="sender">Load source.</param>
+        /// <param name="e">Load args.</param>
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             _hwnd = new WindowInteropHelper(this).EnsureHandle();
@@ -113,6 +124,11 @@ namespace Traycer
             _pipeTask = System.Threading.Tasks.Task.Run(PipeLoopAsync);
         }
 
+        /// <summary>
+        /// Handles shutdown to unwind hooks and background work.
+        /// </summary>
+        /// <param name="sender">Close source.</param>
+        /// <param name="e">Close args.</param>
         private void OnClosed(object? sender, EventArgs e)
         {
             try
@@ -160,3 +176,5 @@ namespace Traycer
         }
     }
 }
+
+

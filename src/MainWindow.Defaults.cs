@@ -12,17 +12,28 @@ namespace Traycer
     {
         private const string DEFAULTS_FILE = "traycer.defaults.json";
 
+        /// <summary>
+        /// Returns the local config directory path.
+        /// </summary>
         private static string GetLocalDefaultsDirectory()
         {
             var baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             return Path.Combine(baseDir, "Traycer");
         }
 
+        /// <summary>
+        /// Returns the full defaults file path.
+        /// </summary>
         private static string GetLocalDefaultsPath()
         {
             return Path.Combine(GetLocalDefaultsDirectory(), DEFAULTS_FILE);
         }
 
+        /// <summary>
+        /// Ensures a defaults file exists for startup.
+        /// </summary>
+        /// <param name="path">Resolved path.</param>
+        /// <returns>True when available.</returns>
         private bool TryEnsureDefaultsFile(out string? path)
         {
             path = GetLocalDefaultsPath();
@@ -71,6 +82,12 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Loads defaults into runtime state.
+        /// </summary>
+        /// <param name="path">Defaults path.</param>
+        /// <param name="error">Error description.</param>
+        /// <returns>True when load succeeded.</returns>
         private bool TryLoadDefaults(string path, out string? error)
         {
             error = null;

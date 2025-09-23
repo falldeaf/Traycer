@@ -9,6 +9,10 @@ namespace Traycer
 {
     public partial class MainWindow
     {
+        /// <summary>
+        /// Loads the tray icon from resources.
+        /// </summary>
+        /// <returns>Icon or null.</returns>
         private static SD.Icon? LoadTrayIcon()
         {
             try
@@ -30,6 +34,9 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Rebuilds the tray context menu.
+        /// </summary>
         private void RefreshTrayMenu()
         {
             if (_trayMenu == null)
@@ -49,6 +56,10 @@ namespace Traycer
             _trayMenu.ResumeLayout();
         }
 
+        /// <summary>
+        /// Builds the wells submenu.
+        /// </summary>
+        /// <returns>Menu item.</returns>
         private WF.ToolStripMenuItem BuildWellsMenu()
         {
             var wellsMenu = new WF.ToolStripMenuItem("Wells");
@@ -74,6 +85,10 @@ namespace Traycer
             return wellsMenu;
         }
 
+        /// <summary>
+        /// Builds the tasks submenu.
+        /// </summary>
+        /// <returns>Menu item.</returns>
         private WF.ToolStripMenuItem BuildTasksMenu()
         {
             var tasksMenu = new WF.ToolStripMenuItem("Tasks");
@@ -91,6 +106,11 @@ namespace Traycer
             return tasksMenu;
         }
 
+        /// <summary>
+        /// Crafts a submenu for a single task.
+        /// </summary>
+        /// <param name="task">Target task.</param>
+        /// <returns>Menu item.</returns>
         private WF.ToolStripMenuItem BuildTaskMenu(ManagedTask task)
         {
             var label = task.Config.Id;
@@ -122,6 +142,10 @@ namespace Traycer
             return item;
         }
 
+        /// <summary>
+        /// Displays a brief tray balloon.
+        /// </summary>
+        /// <param name="text">Message text.</param>
         private void ShowTrayMessage(string text)
         {
             try
@@ -136,3 +160,4 @@ namespace Traycer
         }
     }
 }
+

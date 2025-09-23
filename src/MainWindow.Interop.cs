@@ -64,6 +64,10 @@ namespace Traycer
         private const uint MOD_WIN = 0x0008;
         private const uint VK_H = 0x48;
 
+        /// <summary>
+        /// Reads the taskbar bounds via the shell API.
+        /// </summary>
+        /// <returns>Edge index and rectangle.</returns>
         private (int edge, SD.Rectangle rect) GetTaskbarRect()
         {
             var abd = new APPBARDATA { cbSize = (uint)Marshal.SizeOf<APPBARDATA>() };
@@ -83,11 +87,17 @@ namespace Traycer
             return (edge, rect);
         }
 
+        /// <summary>
+        /// Forces the window back onto the topmost stack.
+        /// </summary>
         private void ReassertTopmost()
         {
             SetWindowPos(_hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
         }
 
+        /// <summary>
+        /// Toggles transparent hit testing for the HUD.
+        /// </summary>
         private void ToggleClickThrough()
         {
             _clickThrough = !_clickThrough;
@@ -110,6 +120,15 @@ namespace Traycer
             ReassertTopmost();
         }
 
+        /// <summary>
+        /// Handles window messages for registered hotkeys.
+        /// </summary>
+        /// <param name="hwnd">Window handle.</param>
+        /// <param name="msg">Message id.</param>
+        /// <param name="wParam">Word parameter.</param>
+        /// <param name="lParam">Long parameter.</param>
+        /// <param name="handled">Set when consumed.</param>
+        /// <returns>Result pointer.</returns>
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             const int WM_HOTKEY = 0x0312;
@@ -123,3 +142,4 @@ namespace Traycer
         }
     }
 }
+

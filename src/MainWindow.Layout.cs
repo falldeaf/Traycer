@@ -9,6 +9,9 @@ namespace Traycer
 {
     public partial class MainWindow
     {
+        /// <summary>
+        /// Aligns the HUD above the taskbar left third.
+        /// </summary>
         private void PositionOverTaskbarLeftThird()
         {
             var (_, rectTB) = GetTaskbarRect();
@@ -26,6 +29,9 @@ namespace Traycer
             ApplyChrome();
         }
 
+        /// <summary>
+        /// Applies padding and radii styling to chrome.
+        /// </summary>
         private void ApplyChrome()
         {
             if (RootBorder != null)
@@ -49,6 +55,9 @@ namespace Traycer
             UpdateWindowWidth();
         }
 
+        /// <summary>
+        /// Computes width to wrap current well layout.
+        /// </summary>
         private void UpdateWindowWidth()
         {
             if (RootBorder == null || WellsGrid == null)
@@ -89,3 +98,4 @@ namespace Traycer
         }
     }
 }
+

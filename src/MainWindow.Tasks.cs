@@ -14,23 +14,51 @@ namespace Traycer
         private const string TraycerTaskFolderName = "Traycer";
         private const string TraycerTaskFolderPath = @"\Traycer";
 
+        /// <summary>
+        /// Captures task launch metadata.
+        /// </summary>
         private record TaskConfig(string Id, string Command, string? Arguments, string Mode, bool AutoStart, ScheduleConfig? Schedule, string? WorkingDirectory);
 
+        /// <summary>
+        /// Describes scheduler cadence.
+        /// </summary>
         private record ScheduleConfig(string Frequency, int? Interval, string? Start);
 
+        /// <summary>
+        /// Tracks runtime state for a configured task.
+        /// </summary>
         private class ManagedTask
         {
+            /// <summary>
+            /// Initializes with a task config.
+            /// </summary>
+            /// <param name="config">Task config.</param>
             public ManagedTask(TaskConfig config) => Config = config;
 
             public TaskConfig Config { get; private set; }
 
+            /// <summary>
+            /// Current live process if running.
+            /// </summary>
             public Process? ActiveProcess { get; set; }
 
+            /// <summary>
+            /// Gets whether this task uses the scheduler.
+            /// </summary>
             public bool IsScheduled => string.Equals(Config.Mode, "schedule", StringComparison.OrdinalIgnoreCase);
 
+            /// <summary>
+            /// Replaces the stored config.
+            /// </summary>
+            /// <param name="config">New config.</param>
             public void Update(TaskConfig config) => Config = config;
         }
 
+        /// <summary>
+        /// Starts a non-scheduled task process.
+        /// </summary>
+        /// <param name="task">Target task.</param>
+        /// <param name="fromMenu">True when user requested.</param>
         private void StartTaskProcess(ManagedTask task, bool fromMenu)
         {
             if (task.ActiveProcess is { HasExited: false })
@@ -84,6 +112,10 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Attempts to kill a running process.
+        /// </summary>
+        /// <param name="task">Target task.</param>
         private void KillTaskProcess(ManagedTask task)
         {
             if (task.ActiveProcess is { HasExited: false } proc)
@@ -102,6 +134,10 @@ namespace Traycer
             RefreshTrayMenu();
         }
 
+        /// <summary>
+        /// Triggers a scheduled task immediately.
+        /// </summary>
+        /// <param name="config">Task config.</param>
         private void RunScheduledTask(TaskConfig config)
         {
             try
@@ -129,6 +165,10 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Requests stop for a scheduled task.
+        /// </summary>
+        /// <param name="config">Task config.</param>
         private void EndScheduledTask(TaskConfig config)
         {
             try
@@ -156,6 +196,10 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Ensures a Windows Task Scheduler entry exists.
+        /// </summary>
+        /// <param name="config">Task config.</param>
         private void EnsureScheduledTask(TaskConfig config)
         {
             if (config.Schedule is null)
@@ -215,6 +259,10 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Removes the scheduler entry for a task.
+        /// </summary>
+        /// <param name="config">Task config.</param>
         private void RemoveScheduledTask(TaskConfig config)
         {
             try
@@ -228,6 +276,13 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Fetches the Traycer task folder.
+        /// </summary>
+        /// <param name="service">Scheduler service.</param>
+        /// <param name="createIfMissing">Create flag.</param>
+        /// <param name="error">Error message.</param>
+        /// <returns>Task folder or null.</returns>
         private static TaskFolder? GetTraycerFolder(TaskService service, bool createIfMissing, out string? error)
         {
             error = null;
@@ -267,6 +322,11 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Detects scheduler missing-folder exceptions.
+        /// </summary>
+        /// <param name="ex">Exception instance.</param>
+        /// <returns>True when folder missing.</returns>
         private static bool IsMissingFolderException(Exception ex)
         {
             return ex is FileNotFoundException
@@ -275,6 +335,13 @@ namespace Traycer
                 || ex is System.Runtime.InteropServices.COMException comEx && (comEx.ErrorCode == unchecked((int)0x80070002) || comEx.ErrorCode == unchecked((int)0x80070003));
         }
 
+        /// <summary>
+        /// Builds a scheduler trigger from config.
+        /// </summary>
+        /// <param name="config">Task config.</param>
+        /// <param name="trigger">Output trigger.</param>
+        /// <param name="error">Unsupported value.</param>
+        /// <returns>True when trigger created.</returns>
         private static bool TryCreateTrigger(TaskConfig config, out Trigger? trigger, out string? error)
         {
             trigger = null;
@@ -339,6 +406,11 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Derives the next start boundary.
+        /// </summary>
+        /// <param name="schedule">Schedule payload.</param>
+        /// <returns>Start time.</returns>
         private static DateTime ResolveStartBoundary(ScheduleConfig schedule)
         {
             if (!string.IsNullOrWhiteSpace(schedule.Start) && TimeSpan.TryParse(schedule.Start, CultureInfo.InvariantCulture, out var timeOfDay))
@@ -350,6 +422,10 @@ namespace Traycer
             return DateTime.Now.AddMinutes(1);
         }
 
+        /// <summary>
+        /// Syncs managed tasks with config set.
+        /// </summary>
+        /// <param name="configs">Configured tasks.</param>
         private void ApplyTasks(IEnumerable<TaskConfig> configs)
         {
             var incoming = configs.ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
@@ -423,6 +499,11 @@ namespace Traycer
             RefreshTrayMenu();
         }
 
+        /// <summary>
+        /// Parses task array from JSON.
+        /// </summary>
+        /// <param name="tasksEl">Tasks element.</param>
+        /// <returns>Task configs.</returns>
         private List<TaskConfig> ParseTaskConfigs(JsonElement tasksEl)
         {
             var list = new List<TaskConfig>();
@@ -438,6 +519,11 @@ namespace Traycer
             return list;
         }
 
+        /// <summary>
+        /// Parses a single task object.
+        /// </summary>
+        /// <param name="element">JSON node.</param>
+        /// <returns>Task config or null.</returns>
         private TaskConfig? ParseTaskConfig(JsonElement element)
         {
             if (!element.TryGetProperty("id", out var idEl))
@@ -524,6 +610,11 @@ namespace Traycer
             return new TaskConfig(id, command, arguments, mode, autoStart, schedule, workingDirectory);
         }
 
+        /// <summary>
+        /// Resolves an executable path search.
+        /// </summary>
+        /// <param name="command">Command text.</param>
+        /// <returns>Absolute path or original.</returns>
         private static string ResolveExecutablePath(string command)
         {
             if (string.IsNullOrWhiteSpace(command))
@@ -589,6 +680,11 @@ namespace Traycer
             return expanded;
         }
 
+        /// <summary>
+        /// Resolves the working directory path.
+        /// </summary>
+        /// <param name="workingDirectory">Directory input.</param>
+        /// <returns>Absolute directory or null.</returns>
         private static string? ResolveWorkingDirectory(string? workingDirectory)
         {
             if (string.IsNullOrWhiteSpace(workingDirectory))
@@ -612,6 +708,11 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Finds pythonw alongside python.exe.
+        /// </summary>
+        /// <param name="command">Original command.</param>
+        /// <returns>Replacement path or null.</returns>
         private static string? MaybeSwapPythonForPythonw(string command)
         {
             if (string.IsNullOrWhiteSpace(command))
@@ -642,6 +743,10 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Retrieves the current user principal string.
+        /// </summary>
+        /// <returns>User or domain\user.</returns>
         private static string? GetCurrentUserPrincipal()
         {
             try
@@ -667,3 +772,6 @@ namespace Traycer
         }
     }
 }
+
+
+
