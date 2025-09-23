@@ -11,8 +11,15 @@ namespace Traycer
 {
     public partial class MainWindow
     {
+        /// <summary>
+        /// Captures persisted well layout.
+        /// </summary>
         private record WellConfig(string id, double width);
 
+        /// <summary>
+        /// Rebuilds the wells grid for supplied configs.
+        /// </summary>
+        /// <param name="configs">Well definitions.</param>
         private void ApplyConfig(IEnumerable<WellConfig> configs)
         {
             WellsGrid.ColumnDefinitions.Clear();
@@ -33,6 +40,11 @@ namespace Traycer
             RefreshTrayMenu();
         }
 
+        /// <summary>
+        /// Creates the border/text pair for a well.
+        /// </summary>
+        /// <param name="id">Well id.</param>
+        /// <returns>Border and text refs.</returns>
         private (Border border, TextBlock tb) CreateWellVisual(string id)
         {
             var border = new Border
@@ -59,6 +71,11 @@ namespace Traycer
             return (border, tb);
         }
 
+        /// <summary>
+        /// Locates the column index for a well id.
+        /// </summary>
+        /// <param name="id">Well id.</param>
+        /// <returns>Column index or null.</returns>
         private int? GetColumnOf(string id)
         {
             if (!_wells.TryGetValue(id, out var tuple))
@@ -69,6 +86,12 @@ namespace Traycer
             return Grid.GetColumn(tuple.border);
         }
 
+        /// <summary>
+        /// Inserts a new well at the requested slot.
+        /// </summary>
+        /// <param name="id">Well id.</param>
+        /// <param name="width">Column width.</param>
+        /// <param name="index">Optional index.</param>
         private void AddWell(string id, double width, int? index = null)
         {
             if (_wells.ContainsKey(id))
@@ -97,6 +120,10 @@ namespace Traycer
             RefreshTrayMenu();
         }
 
+        /// <summary>
+        /// Removes a well column and related action.
+        /// </summary>
+        /// <param name="id">Well id.</param>
         private void RemoveWell(string id)
         {
             if (!_wells.TryGetValue(id, out var tuple))
@@ -123,6 +150,11 @@ namespace Traycer
             RefreshTrayMenu();
         }
 
+        /// <summary>
+        /// Adjusts an existing well width.
+        /// </summary>
+        /// <param name="id">Well id.</param>
+        /// <param name="width">Requested width.</param>
         private void ResizeWell(string id, double width)
         {
             int? col = GetColumnOf(id);
@@ -135,6 +167,11 @@ namespace Traycer
             UpdateWindowWidth();
         }
 
+        /// <summary>
+        /// Handles well clicks to launch actions.
+        /// </summary>
+        /// <param name="sender">Border source.</param>
+        /// <param name="e">Click args.</param>
         private void OnWellClick(object sender, MouseButtonEventArgs e)
         {
             if (_clickThrough)
@@ -155,6 +192,15 @@ namespace Traycer
             ExecuteActionCommand(action);
         }
 
+        /// <summary>
+        /// Updates visual and action state for a well.
+        /// </summary>
+        /// <param name="id">Well id.</param>
+        /// <param name="text">New label.</param>
+        /// <param name="fg">Foreground hex.</param>
+        /// <param name="bg">Background hex.</param>
+        /// <param name="blink">Blink flag.</param>
+        /// <param name="action">Action command.</param>
         private void SetWell(string id, string? text = null, string? fg = null, string? bg = null, bool? blink = null, string? action = null)
         {
             if (!_wells.TryGetValue(id, out var tuple))
@@ -191,6 +237,10 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Runs the configured command for a well.
+        /// </summary>
+        /// <param name="id">Well id.</param>
         private void RunWellAction(string id)
         {
             if (!_actions.TryGetValue(id, out var action) || string.IsNullOrWhiteSpace(action))
@@ -201,6 +251,10 @@ namespace Traycer
             ExecuteActionCommand(action);
         }
 
+        /// <summary>
+        /// Executes a command or shell verb.
+        /// </summary>
+        /// <param name="action">Action text.</param>
         private void ExecuteActionCommand(string action)
         {
             try
@@ -229,6 +283,12 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Attempts to parse a hex color.
+        /// </summary>
+        /// <param name="hex">Hex literal.</param>
+        /// <param name="color">Parsed color.</param>
+        /// <returns>True when parsed.</returns>
         private static bool TryParseColor(string hex, out System.Windows.Media.Color color)
         {
             try
@@ -276,3 +336,5 @@ namespace Traycer
         }
     }
 }
+
+

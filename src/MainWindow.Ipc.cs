@@ -12,6 +12,10 @@ namespace Traycer
     {
         private const string PIPE_NAME = "TraycerHud";
 
+        /// <summary>
+        /// Hosts the named-pipe server loop.
+        /// </summary>
+        /// <returns>Completion task.</returns>
         private async Task PipeLoopAsync()
         {
             while (!_cts.IsCancellationRequested)
@@ -50,6 +54,10 @@ namespace Traycer
             }
         }
 
+        /// <summary>
+        /// Dispatches a parsed pipe message payload.
+        /// </summary>
+        /// <param name="msg">JSON message.</param>
         private void HandleMessage(JsonElement msg)
         {
             string op = msg.TryGetProperty("op", out var opEl) ? opEl.GetString() ?? string.Empty : string.Empty;
