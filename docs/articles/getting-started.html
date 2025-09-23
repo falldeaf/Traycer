@@ -1,0 +1,150 @@
+﻿<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>Getting Started | Traycer HUD </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="Getting Started | Traycer HUD ">
+    
+    
+      <link rel="shortcut icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="../styles/docfx.css">
+      <link rel="stylesheet" href="../styles/main.css">
+      <meta property="docfx:navrel" content="../toc.html">
+      <meta property="docfx:tocrel" content="../toc.html">
+    
+    <meta property="docfx:rel" content="../">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="../index.html">
+                <img id="logo" class="svg" src="../logo.svg" alt="">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first="First" data-prev="Previous" data-next="Next" data-last="Last"></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+        <div class="article row grid">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="">
+<h1 id="getting-started">Getting Started</h1>
+
+<p>This guide walks through installing Traycer HUD, seeding its configuration, and understanding day-to-day usage.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>Windows 10 or later with .NET 8 desktop runtime.</li>
+<li>Clone of the Traycer repository.</li>
+<li>Optional: Python or other tooling referenced by your background tasks.</li>
+</ul>
+<h2 id="build-and-run">Build and run</h2>
+<ol>
+<li>Restore and build from the repository root:
+<pre><code class="lang-powershell">dotnet build src/Traycer.csproj
+</code></pre>
+</li>
+<li>Launch the HUD:
+<pre><code class="lang-powershell">dotnet run --project src/Traycer.csproj
+</code></pre>
+</li>
+<li>The tray icon appears in the notification area. Right-click it to open commands for wells and background tasks.</li>
+</ol>
+<h2 id="defaults-file">Defaults file</h2>
+<p>Traycer will look for <code>traycer.defaults.json</code> under <code>%LOCALAPPDATA%\Traycer</code>. If the file is missing, the app offers to scaffold a template based on the copy bundled beside the executable.</p>
+<p>Key sections to configure:</p>
+<ul>
+<li><code>placement</code> – tune height, padding, and corner radius of the HUD.</li>
+<li><code>wells</code> – declare the columns shown on screen, including width and optional index order.</li>
+<li><code>updates</code> – seed initial text, colors, and click actions for wells.</li>
+<li><code>tasks</code> – define background processes or scheduled jobs managed through the tray menu.</li>
+</ul>
+<h2 id="interaction-basics">Interaction basics</h2>
+<ul>
+<li>Toggle click-through mode with <strong>Win+Alt+H</strong>. While click-through is off, left-clicking a well triggers its bound action.</li>
+<li>The HUD reasserts topmost order automatically and when the window deactivates.</li>
+<li>Use the tray menu to remove wells, start or stop scheduled tasks, and exit the app.</li>
+</ul>
+<p>For the JSON commands that drive the HUD dynamically, see the <a href="ipc-protocol.html">IPC Protocol</a> article.</p>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/thomas-mardis/Traycer/blob/main/docs/articles/getting-started.md/#L1" class="contribution-link">Edit this page</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      Traycer HUD Documentation
+      
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="../styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="../styles/docfx.js"></script>
+    <script type="text/javascript" src="../styles/main.js"></script>
+  </body>
+</html>

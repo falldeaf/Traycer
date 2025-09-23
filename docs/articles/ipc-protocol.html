@@ -1,0 +1,267 @@
+﻿<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>IPC JSON Protocol | Traycer HUD </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="IPC JSON Protocol | Traycer HUD ">
+    
+    
+      <link rel="shortcut icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="../styles/docfx.css">
+      <link rel="stylesheet" href="../styles/main.css">
+      <meta property="docfx:navrel" content="../toc.html">
+      <meta property="docfx:tocrel" content="../toc.html">
+    
+    <meta property="docfx:rel" content="../">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="../index.html">
+                <img id="logo" class="svg" src="../logo.svg" alt="">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first="First" data-prev="Previous" data-next="Next" data-last="Last"></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+        <div class="article row grid">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="">
+<h1 id="ipc-json-protocol">IPC JSON Protocol</h1>
+
+<p>Traycer listens on the named pipe <code>\\.\pipe\TraycerHud</code> for newline-delimited UTF-8 JSON payloads. Each message is applied immediately and the pipe remains one-way—no acknowledgements are sent.</p>
+<h2 id="colors">Colors</h2>
+<p>Color fields accept <code>#RRGGBB</code>, <code>#AARRGGBB</code>, <code>0xAARRGGBB</code>, or <code>hex:AARRGGBB</code> formats.</p>
+<h2 id="click-actions">Click actions</h2>
+<p>A well may define an <code>action</code> that runs when the user left-clicks while click-through mode is <strong>off</strong> (toggle with <strong>Win+Alt+H</strong>).</p>
+<ul>
+<li>If the action string contains <code>://</code>, it is launched via the shell.</li>
+<li>Otherwise Traycer executes <code>cmd.exe /c &lt;action&gt;</code>.</li>
+</ul>
+<h2 id="operations">Operations</h2>
+<h3 id="placement"><code>placement</code></h3>
+<p>Adjust the HUD geometry for the current session.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;placement&quot;,&quot;height&quot;:24,&quot;bottomOffset&quot;:2,&quot;padding&quot;:6,&quot;cornerRadius&quot;:8}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>height</code></td>
+<td>Content height in pixels</td>
+</tr>
+<tr>
+<td><code>bottomOffset</code></td>
+<td>Offset from the screen bottom in pixels</td>
+</tr>
+<tr>
+<td><code>padding</code></td>
+<td>Outer and inner padding in pixels</td>
+</tr>
+<tr>
+<td><code>cornerRadius</code></td>
+<td>Corner radius in pixels</td>
+</tr>
+</tbody>
+</table>
+<h3 id="config"><code>config</code></h3>
+<p>Replace <strong>all</strong> wells with the supplied collection.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;config&quot;,&quot;wells&quot;:[{&quot;id&quot;:&quot;weather&quot;,&quot;width&quot;:240},{&quot;id&quot;:&quot;build&quot;,&quot;width&quot;:180}]}
+</code></pre>
+<p>Each entry supplies:</p>
+<ul>
+<li><code>id</code> – unique well identifier</li>
+<li><code>width</code> – width in pixels</li>
+</ul>
+<h3 id="add"><code>add</code></h3>
+<p>Insert a well without clearing existing wells.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;add&quot;,&quot;well&quot;:&quot;alerts&quot;,&quot;width&quot;:160,&quot;index&quot;:2}
+</code></pre>
+<ul>
+<li>If <code>index</code> is omitted, the well is appended.</li>
+<li>Supplying an existing <code>well</code> id resizes that column instead.</li>
+</ul>
+<h3 id="remove"><code>remove</code></h3>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;remove&quot;,&quot;well&quot;:&quot;ram&quot;}
+</code></pre>
+<h3 id="resize"><code>resize</code></h3>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;resize&quot;,&quot;well&quot;:&quot;weather&quot;,&quot;width&quot;:300}
+</code></pre>
+<h3 id="set"><code>set</code></h3>
+<p>Set text, styling, and action for a single well.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;build&quot;,&quot;text&quot;:&quot;✔ Passing&quot;,&quot;bg&quot;:&quot;#33305533&quot;,&quot;fg&quot;:&quot;#FFFFFF&quot;,&quot;blink&quot;:false,&quot;action&quot;:&quot;start https://ci.example.com&quot;}
+</code></pre>
+<p>Fields:</p>
+<ul>
+<li><code>text</code> – label content (emoji supported)</li>
+<li><code>fg</code>, <code>bg</code> – colors (see formats above)</li>
+<li><code>blink</code> – boolean hint used for emphasis styling</li>
+<li><code>action</code> – command or URL to run on click</li>
+</ul>
+<h3 id="bulk"><code>bulk</code></h3>
+<p>Apply multiple <code>set</code> updates in a single message.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;bulk&quot;,&quot;updates&quot;:[
+  {&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;net&quot;,&quot;text&quot;:&quot;📶  142 Mbps&quot;},
+  {&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;cpu&quot;,&quot;text&quot;:&quot;🖥️  34%&quot;},
+  {&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;ram&quot;,&quot;text&quot;:&quot;📦  61%&quot;}
+]}
+</code></pre>
+<h3 id="bind"><code>bind</code></h3>
+<p>Bind or update an action without touching text or colors.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;bind&quot;,&quot;well&quot;:&quot;meeting&quot;,&quot;action&quot;:&quot;start https://meet.example.com/room&quot;}
+</code></pre>
+<h2 id="defaults-file">Defaults file</h2>
+<p>Traycer requires a defaults file on startup. If none is found, the app offers to copy the template bundled next to the executable.</p>
+<p>Lookup order:</p>
+<ol>
+<li><code>AppContext.BaseDirectory\traycer.defaults.json</code></li>
+<li><code>%LOCALAPPDATA%\Traycer\traycer.defaults.json</code></li>
+<li>Path supplied by the <code>TRAYCER_DEFAULTS</code> environment variable (highest priority)</li>
+</ol>
+<p>Keys are case-insensitive. Example:</p>
+<pre><code class="lang-json">{
+  &quot;placement&quot;: { &quot;height&quot;:24, &quot;bottomOffset&quot;:2, &quot;padding&quot;:6, &quot;cornerRadius&quot;:8 },
+  &quot;wells&quot;: [
+    { &quot;id&quot;:&quot;weather&quot;, &quot;width&quot;:240, &quot;index&quot;:0 },
+    { &quot;id&quot;:&quot;build&quot;,   &quot;width&quot;:180 }
+  ],
+  &quot;updates&quot;: [
+    { &quot;well&quot;:&quot;weather&quot;,&quot;text&quot;:&quot;🌦️  73°F&quot;,&quot;bg&quot;:&quot;#33223333&quot; }
+  ],
+  &quot;tasks&quot;: [
+    {
+      &quot;id&quot;: &quot;weather-refresh&quot;,
+      &quot;command&quot;: &quot;python.exe&quot;,
+      &quot;args&quot;: &quot;\&quot;weather.py\&quot; 47.61 -122.33&quot;,
+      &quot;mode&quot;: &quot;once&quot;,
+      &quot;autoStart&quot;: false
+    },
+    {
+      &quot;id&quot;: &quot;calendar-loop&quot;,
+      &quot;command&quot;: &quot;python.exe&quot;,
+      &quot;args&quot;: &quot;\&quot;calendar_overview.py\&quot; https://example.com/private.ics&quot;,
+      &quot;mode&quot;: &quot;schedule&quot;,
+      &quot;autoStart&quot;: true,
+      &quot;schedule&quot;: { &quot;frequency&quot;: &quot;minute&quot;, &quot;interval&quot;: 5, &quot;start&quot;: &quot;06:00&quot; }
+    }
+  ],
+  &quot;actions&quot;: {
+    &quot;build&quot;: &quot;start https://ci.example.com&quot;
+  }
+}
+</code></pre>
+<p>Notes:</p>
+<ul>
+<li><code>wells[].index</code> controls layout order; otherwise file order is preserved.</li>
+<li>Use runtime messages (<code>add</code>, <code>remove</code>, <code>resize</code>) for incremental layout changes.</li>
+<li><code>tasks</code> entries launch background commands. <code>mode: &quot;once&quot;</code> optionally auto-starts a process, while <code>mode: &quot;schedule&quot;</code> registers with Windows Task Scheduler under the <em>Traycer</em> folder.</li>
+<li>Scheduled tasks accept <code>frequency</code> (<code>minute</code>, <code>hourly</code>, <code>daily</code>, <code>logon</code>), an optional <code>interval</code>, and optional <code>start</code> (<code>HH:mm</code>). The tray menu can start/stop scheduled jobs or run/kill on-demand commands.</li>
+</ul>
+<h2 id="additional-notes">Additional notes</h2>
+<ul>
+<li>Messages are processed sequentially without batching; use <code>bulk</code> to apply grouped updates.</li>
+<li>Escape <code>#</code> in PowerShell when passing color literals, e.g. <code>--bg &quot;#33223333&quot;</code>.</li>
+<li>The HUD reasserts its topmost z-order periodically and whenever it deactivates.</li>
+<li>The tray icon exposes contextual commands for wells (run action, remove) and tasks (run/stop/kill). Scheduled entries created by Traycer are removed on exit.</li>
+</ul>
+<h2 id="example-session">Example session</h2>
+<pre><code>{&quot;op&quot;:&quot;placement&quot;,&quot;height&quot;:24,&quot;bottomOffset&quot;:2,&quot;padding&quot;:6}
+{&quot;op&quot;:&quot;config&quot;,&quot;wells&quot;:[{&quot;id&quot;:&quot;weather&quot;,&quot;width&quot;:240},{&quot;id&quot;:&quot;build&quot;,&quot;width&quot;:180},{&quot;id&quot;:&quot;cpu&quot;,&quot;width&quot;:110}]}
+{&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;weather&quot;,&quot;text&quot;:&quot;🌦️  71°F Light rain&quot;}
+{&quot;op&quot;:&quot;bind&quot;,&quot;well&quot;:&quot;build&quot;,&quot;action&quot;:&quot;start https://ci.example.com&quot;}
+{&quot;op&quot;:&quot;bulk&quot;,&quot;updates&quot;:[
+  {&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;build&quot;,&quot;text&quot;:&quot;⚙️ Running.&quot;,&quot;bg&quot;:&quot;#33333322&quot;},
+  {&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;cpu&quot;,&quot;text&quot;:&quot;🖥️  34%&quot;}
+]}
+{&quot;op&quot;:&quot;add&quot;,&quot;well&quot;:&quot;alerts&quot;,&quot;width&quot;:160,&quot;index&quot;:2}
+{&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;alerts&quot;,&quot;text&quot;:&quot;🔔  3 alerts&quot;,&quot;bg&quot;:&quot;hex:33222222&quot;}
+</code></pre>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/thomas-mardis/Traycer/blob/main/docs/articles/ipc-protocol.md/#L1" class="contribution-link">Edit this page</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      Traycer HUD Documentation
+      
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="../styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="../styles/docfx.js"></script>
+    <script type="text/javascript" src="../styles/main.js"></script>
+  </body>
+</html>
