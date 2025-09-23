@@ -32,9 +32,12 @@ def ensure_well(width: int = DEFAULT_WIDTH) -> None:
     send_json({"op": "add", "well": TARGET_WELL, "width": width})
 
 
-def send_to_traycer(text: str) -> bool:
+def send_to_traycer(text: str, action: Optional[str] = None) -> bool:
     ensure_well()
-    return send_json({"op": "set", "well": TARGET_WELL, "text": text})
+    payload = {"op": "set", "well": TARGET_WELL, "text": text}
+    if action:
+        payload["action"] = action
+    return send_json(payload)
 
 
 def get_weather(lat: float, lon: float) -> Optional[str]:
@@ -83,6 +86,8 @@ def get_weather(lat: float, lon: float) -> Optional[str]:
     return f"{emoji}  {temp}\u00B0F {desc}"
 
 
+def build_weather_action(lat: float, lon: float) -> str:
+    return f'https://www.google.com/search?q=weather'
 def parse_location(arg: str) -> Optional[tuple[float, float]]:
     try:
         lat = float(arg)
@@ -130,10 +135,13 @@ def main() -> int:
     if weather_text is None:
         return 1
 
+    action = build_weather_action(lat, lon)
     print(weather_text)
-    send_to_traycer(weather_text)
+    send_to_traycer(weather_text, action)
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+

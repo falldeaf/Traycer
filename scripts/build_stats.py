@@ -17,7 +17,7 @@ PIPE_NAME = r"\\.\pipe\TraycerHud"
 PIPE_TIMEOUT_SECONDS = 5.0
 BUILD_WELL_ID = "build"
 BUILD_WELL_WIDTH = 240
-
+DEPLOYMENTS_ACTION = 'https://github.com/SimX-Inc/unity-client/deployments'
 DEFAULT_FG = "#80F8F8F2"
 DEFAULT_BG = "#8044475A"
 
@@ -122,8 +122,10 @@ def send_traycer(payload: dict[str, Any]) -> bool:
 def ensure_build_well(width: int = BUILD_WELL_WIDTH) -> None:
     send_traycer({"op": "add", "well": BUILD_WELL_ID, "width": width})
 
-def set_build_text(text: str, fg: str, bg: str) -> None:
+def set_build_text(text: str, fg: str, bg: str, action: Optional[str] = None) -> None:
     payload = {"op": "set", "well": BUILD_WELL_ID, "text": text, "fg": fg, "bg": bg}
+    if action:
+        payload["action"] = action
     send_traycer(payload)
 
 # ---- Main ----
@@ -181,8 +183,10 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     # Send to Traycer
     ensure_build_well()
-    set_build_text(summary, fg, bg)
+    set_build_text(summary, fg, bg, DEPLOYMENTS_ACTION)
     return 0
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
