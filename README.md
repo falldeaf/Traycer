@@ -1,3 +1,4 @@
+
 # Traycer HUD — IPC JSON Protocol (concise)
 
 **Purpose:** Drive a Windows HUD that renders fixed-width “wells” (columns) in a slim, always-on-top strip.

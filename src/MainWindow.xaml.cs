@@ -65,7 +65,7 @@ namespace Traycer
 
         // ===== State =====
         private readonly WF.NotifyIcon _tray;
-        private bool _clickThrough = true;
+        private bool _clickThrough = false;
         private IntPtr _hwnd;
 
         private readonly CancellationTokenSource _cts = new();
