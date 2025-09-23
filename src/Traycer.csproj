@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -11,6 +11,7 @@
     <SelfContained>false</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <ApplicationIcon>images\Traycer.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <None Update="traycer.defaults.json">
@@ -20,5 +21,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="TaskScheduler" Version="2.12.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="images\Traycer.ico" />
   </ItemGroup>
 </Project>
