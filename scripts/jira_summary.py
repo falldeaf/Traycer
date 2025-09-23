@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import subprocess
+from subprocess import STARTF_USESHOWWINDOW, STARTUPINFO
 import sys
 import time
 from typing import Optional
@@ -18,6 +19,8 @@ CONNECT_TIMEOUT = 5.0
 BASE_JQL = 'assignee in (currentUser()) AND status in ("In Progress","To Do")'
 ACTION_JQL = f"{BASE_JQL} order by status ASC"
 ACTION_URL = f"https://simx.atlassian.net/issues/?jql={quote(ACTION_JQL, safe='')}"
+CREATE_NO_WINDOW = 0x08000000
+
 STATUS_ICONS = [
     ("To Do", "📋"),
     ("In Progress", "🛠️"),
@@ -105,7 +108,16 @@ def run_acli_count(jql: str) -> int:
     attempts = [base_cmd + ["--outputFormat", "json"], base_cmd]
     last_error = ""
     for cmd in attempts:
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        startup = STARTUPINFO()
+        startup.dwFlags |= STARTF_USESHOWWINDOW
+        startup.wShowWindow = 0
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            startupinfo=startup,
+            creationflags=CREATE_NO_WINDOW,
+        )
         if proc.returncode == 0:
             combined = proc.stdout if proc.stdout else proc.stderr
             return parse_acli_count(combined)

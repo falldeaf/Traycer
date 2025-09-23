@@ -64,6 +64,7 @@ namespace Traycer
         const uint VK_H = 0x48;
 
         // ===== State =====
+        private readonly SD.Icon? _trayIcon;
         private readonly WF.NotifyIcon _tray;
         private bool _clickThrough = false;
         private IntPtr _hwnd;
@@ -121,9 +122,10 @@ namespace Traycer
             SystemEvents.UserPreferenceChanged += (_, __) => PositionOverTaskbarLeftThird();
 
             // Tray icon
+            _trayIcon = LoadTrayIcon();
             _tray = new WF.NotifyIcon
             {
-                Icon = SD.SystemIcons.Information,
+                Icon = _trayIcon ?? SD.SystemIcons.Information,
                 Text = "Traycer HUD"
             };
             _trayMenu = new WF.ContextMenuStrip();
@@ -183,9 +185,31 @@ namespace Traycer
 
             _tray.Visible = false;
             _tray.Dispose();
+            _trayIcon?.Dispose();
         }
 
         // ===== Layout / placement =====
+        private static SD.Icon? LoadTrayIcon()
+        {
+            try
+            {
+                var uri = new Uri("pack://application:,,,/images/Traycer.ico");
+                var streamInfo = System.Windows.Application.GetResourceStream(uri);
+                if (streamInfo is null)
+                {
+                    return null;
+                }
+
+                using var stream = streamInfo.Stream;
+                return new SD.Icon(stream);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Traycer tray icon load failed: {ex}");
+                return null;
+            }
+        }
+
         private void PositionOverTaskbarLeftThird()
         {
             var (_, rectTB) = GetTaskbarRect();
@@ -1443,3 +1467,6 @@ namespace Traycer
 
     }
 }
+
+
+

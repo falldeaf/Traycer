@@ -1,0 +1,23 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Traycer wordmark logo (soft)">
+  <defs>
+    <style>
+      .bg { fill: #0B1220; }     /* deep navy */
+      .text { fill: #A9D6FF; }   /* light blue */
+      .accent { fill: #59F7AE; } /* neon green */
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="320" rx="20"/>
+
+  <g transform="translate(64, 92)">
+    <text x="0" y="92" class="text" font-family="Segoe UI, Inter, Roboto, Helvetica, Arial, sans-serif"
+          font-size="120" font-weight="700" letter-spacing="4">TRAYCER</text>
+
+    <!-- softer underline -->
+    <rect class="accent" x="0"   y="140" width="680" height="16" rx="5"/>
+    <!-- exactly 3 dots -->
+    <rect class="accent" x="704" y="140" width="16" height="16" rx="5"/>
+    <rect class="accent" x="736" y="140" width="16" height="16" rx="5"/>
+    <rect class="accent" x="768" y="140" width="16" height="16" rx="5"/>
+  </g>
+</svg>
