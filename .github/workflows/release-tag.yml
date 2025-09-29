@@ -1,0 +1,157 @@
+name: Release Tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      PACKAGE_IDENTIFIER: ThomasMardis.Traycer
+      CODESIGN_PFX: ${{ secrets.CODESIGN_PFX }}
+      CODESIGN_PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Determine version
+        id: vars
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF -replace '^refs/tags/v',''
+          if (-not $tag) { throw 'Unable to parse tag version.' }
+          'version=' + $tag >> $env:GITHUB_OUTPUT
+          'setup_name=TraycerSetup_' + $tag + '.exe' >> $env:GITHUB_OUTPUT
+
+      - name: Restore dependencies
+        run: dotnet restore src/Traycer.csproj
+
+      - name: Publish application
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $PWD 'dist/Traycer'
+          dotnet publish src/Traycer.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output $publishDir `
+            /p:PublishSingleFile=true `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:IncludeAllContentForSelfExtract=true `
+            /p:Version=${{ steps.vars.outputs.version }}
+
+      - name: Code sign application binaries (optional)
+        if: env.CODESIGN_PFX != ''
+        shell: pwsh
+        run: |
+          $certPath = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
+          [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:CODESIGN_PFX))
+          $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10' -Recurse -Filter signtool.exe | Sort-Object FullName | Select-Object -First 1
+          if (-not $signtool) { throw 'signtool.exe not found' }
+          Get-ChildItem dist/Traycer -Filter *.exe -Recurse | ForEach-Object {
+            & $signtool.FullName sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f $certPath /p $env:CODESIGN_PFX_PASSWORD $_.FullName
+          }
+          Remove-Item $certPath -ErrorAction SilentlyContinue
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress --yes
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $PWD 'dist/Traycer'
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw "ISCC not found at $iscc" }
+          & $iscc "installer\Traycer.iss" /DMyAppVersion=${{ steps.vars.outputs.version }} /DMySourceDir="$publishDir"
+
+      - name: Code sign installer (optional)
+        if: env.CODESIGN_PFX != ''
+        shell: pwsh
+        run: |
+          $installerPath = Join-Path $PWD ('dist/installer/' + '${{ steps.vars.outputs.setup_name }}')
+          if (-not (Test-Path $installerPath)) { throw "Installer not found at $installerPath" }
+          $certPath = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
+          [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:CODESIGN_PFX))
+          $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10' -Recurse -Filter signtool.exe | Sort-Object FullName | Select-Object -First 1
+          if (-not $signtool) { throw 'signtool.exe not found' }
+          & $signtool.FullName sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f $certPath /p $env:CODESIGN_PFX_PASSWORD $installerPath
+          Remove-Item $certPath -ErrorAction SilentlyContinue
+
+      - name: Compute SHA-256
+        id: checksum
+        shell: pwsh
+        run: |
+          $installerPath = Join-Path $PWD ('dist/installer/' + '${{ steps.vars.outputs.setup_name }}')
+          $hash = (Get-FileHash $installerPath -Algorithm SHA256).Hash
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
+
+      - name: Write checksum file
+        shell: pwsh
+        run: |
+          $installerDir = Join-Path $PWD 'dist/installer'
+          $hash = '${{ steps.checksum.outputs.sha256 }}'
+          $fileName = '${{ steps.vars.outputs.setup_name }}'
+          $content = "$hash  $fileName"
+          Set-Content -Path (Join-Path $installerDir ($fileName + '.sha256')) -Value $content -Encoding ASCII
+
+      - name: Prepare asset metadata
+        id: asset-info
+        shell: pwsh
+        run: |
+          $repo = $env:GITHUB_REPOSITORY
+          $version = '${{ steps.vars.outputs.version }}'
+          $fileName = '${{ steps.vars.outputs.setup_name }}'
+          $url = "https://github.com/$repo/releases/download/v$version/$fileName"
+          "asset_url=$url" >> $env:GITHUB_OUTPUT
+
+      - name: Attach assets to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            dist/installer/${{ steps.vars.outputs.setup_name }}
+            dist/installer/${{ steps.vars.outputs.setup_name }}.sha256
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Submit winget manifest (optional)
+        if: env.WINGET_TOKEN != ''
+        shell: pwsh
+        continue-on-error: true
+        env:
+          INSTALLER_URL: ${{ steps.asset-info.outputs.asset_url }}
+          INSTALLER_SHA: ${{ steps.checksum.outputs.sha256 }}
+          VERSION: ${{ steps.vars.outputs.version }}
+        run: |
+          Write-Host 'Preparing winget manifest update'
+          $wingetRelease = Invoke-RestMethod -Uri 'https://api.github.com/repos/microsoft/winget-create/releases/latest'
+          $asset = $wingetRelease.assets | Where-Object { $_.name -like '*win-x64.zip' } | Select-Object -First 1
+          if (-not $asset) { throw 'wingetcreate release asset not found' }
+          $zipPath = Join-Path $env:RUNNER_TEMP 'wingetcreate.zip'
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
+          $extractDir = Join-Path $env:RUNNER_TEMP 'wingetcreate'
+          Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+          $wingetCreate = Get-ChildItem $extractDir -Filter wingetcreate.exe -Recurse | Select-Object -First 1
+          if (-not $wingetCreate) { throw 'wingetcreate.exe not found after extraction' }
+          & $wingetCreate.FullName update $env:PACKAGE_IDENTIFIER `
+            --version $env:VERSION `
+            --url $env:INSTALLER_URL `
+            --sha256 $env:INSTALLER_SHA `
+            --installer-type exe `
+            --installer-switches silent="--verysilent --norestart" `
+            --installer-switches silentWithProgress="--silent --norestart" `
+            --token $env:WINGET_TOKEN `
+            --submit

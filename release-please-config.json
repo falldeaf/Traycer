@@ -1,0 +1,19 @@
+{
+  "branches": [
+    {
+      "branch": "main",
+      "handleMergeConflicts": true,
+      "releaseType": "dotnet",
+      "packageName": "Traycer"
+    }
+  ],
+  "packages": {
+    ".": {
+      "path": ".",
+      "releaseType": "dotnet",
+      "extraFiles": [
+        "src/Traycer.csproj"
+      ]
+    }
+  }
+}

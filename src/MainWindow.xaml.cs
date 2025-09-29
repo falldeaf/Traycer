@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using Traycer.Update;
 using WF = System.Windows.Forms;
 using SD = System.Drawing;
 
@@ -28,6 +29,11 @@ namespace Traycer
         private readonly Dictionary<string, string> _actions = new();
         private readonly Dictionary<string, ManagedTask> _tasks = new(StringComparer.OrdinalIgnoreCase);
         private readonly WF.ContextMenuStrip _trayMenu;
+        private readonly UpdateService _updateService = new();
+        private UpdateAvailability? _availableUpdate;
+        private bool _isCheckingForUpdates;
+        private bool _isUpdating;
+        private SD.Icon? _updateBadgeIcon;
 
         private double? _heightOverride = 26;
         private double _bottomOffset = 2;
@@ -82,14 +88,19 @@ namespace Traycer
             _tray = new WF.NotifyIcon
             {
                 Icon = _trayIcon ?? SD.SystemIcons.Information,
-                Text = "Traycer HUD"
+                Text = $"{AppConstants.AppDisplayName} v{AppVersion.NormalizedVersion}"
             };
 
             _trayMenu = new WF.ContextMenuStrip();
             _trayMenu.Opening += (_, __) => RefreshTrayMenu();
             _tray.ContextMenuStrip = _trayMenu;
+            _updateService.UpdateAvailabilityChanged += OnUpdateAvailabilityChanged;
+            _availableUpdate = _updateService.LatestUpdate;
+            UpdateTrayIconForUpdates();
             RefreshTrayMenu();
             _tray.Visible = true;
+            _updateService.Start();
+            _ = CheckForUpdatesAsync(false, false);
 
             ApplyChrome();
         }
@@ -170,11 +181,20 @@ namespace Traycer
 
             _tasks.Clear();
 
+            _updateService.Dispose();
+            _updateBadgeIcon?.Dispose();
+
             _tray.Visible = false;
             _tray.Dispose();
             _trayIcon?.Dispose();
         }
     }
 }
+
+
+
+
+
+
 
 

@@ -12,6 +12,17 @@
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <ApplicationIcon>images\Traycer.ico</ApplicationIcon>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Version Condition="'$(Version)'==''">$(VersionPrefix)</Version>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
+    <FileVersion>$(Version)</FileVersion>
+    <InformationalVersion>$(Version)</InformationalVersion>
+    <Company>Thomas Mardis</Company>
+    <Product>Traycer HUD</Product>
+    <Authors>Thomas Mardis</Authors>
+    <RepositoryUrl>https://github.com/thomas-mardis/Traycer</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/thomas-mardis/Traycer</PackageProjectUrl>
+    <NeutralLanguage>en-US</NeutralLanguage>
   </PropertyGroup>
   <ItemGroup>
     <None Update="traycer.defaults.json">
