@@ -4,5 +4,11 @@
   href: getting-started.md
 - name: IPC JSON Protocol
   href: ipc-protocol.md
+- name: Defaults Configuration
+  href: defaults.md
+- name: Background Tasks
+  href: tasks.md
+- name: Custom Script Tutorial
+  href: custom-scripts.md
 - name: API Reference
   href: ../api/toc.yml

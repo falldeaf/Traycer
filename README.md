@@ -25,6 +25,9 @@ Traycer is a lightweight Windows overlay that keeps a strip of live "wells" pinn
 
 - [Getting Started](docs/articles/getting-started.md)
 - [IPC JSON Protocol](docs/articles/ipc-protocol.md)
+- [Defaults Configuration](docs/articles/defaults.md)
+- [Background Tasks](docs/articles/tasks.md)
+- [Custom Script Tutorial](docs/articles/custom-scripts.md)
 - API Reference *(generate locally with DocFX; instructions below)*
 
 Generate the documentation site locally:
@@ -38,7 +41,5 @@ dotnet docfx build
 ```
 
 The generated site is emitted to `docs/_site/` (ignored from source control). Open `_site/index.html` in a browser to browse the pages.
-
-## Contributing
 
 Issues and pull requests are welcome. Please run `dotnet format` and the build/test suite before submitting changes.

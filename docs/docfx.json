@@ -35,7 +35,8 @@
     "resource": [
       {
         "files": [
-          "images/**"
+          "images/**",
+          "styles/**"
         ]
       }
     ],
@@ -43,11 +44,14 @@
       "_appTitle": "Traycer HUD",
       "_appFooter": "Traycer HUD Documentation",
       "_enableSearch": true,
-      "_disableNavbar": true
+      "_disableNavbar": false,
+      "_appLogoPath": "images/traycer-icon.png",
+      "_appAdditionalHead": "<link rel=\"stylesheet\" href=\"styles/main.css\"><script>window.traycerDocsConfig = { repoUrl: \"https://github.com/SimX/traycer\", logoPath: \"images/traycer-logo.svg\" };</script>",
+      "_appAdditionalFooter": "<script src=\"styles/main.js\"></script>"
     },
     "template": [
-      "statictoc",
-      "default"
+      "default",
+      "modern"
     ],
     "dest": "_site"
   }
