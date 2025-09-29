@@ -21,6 +21,19 @@ Traycer is a lightweight Windows overlay that keeps a strip of live "wells" pinn
    ```
 3. Provide or accept the generated defaults file when prompted, then drive the HUD with your automation scripts.
 
+## Installation & Updates
+
+- Download the latest `TraycerSetup_<version>.exe` from [GitHub Releases](https://github.com/thomas-mardis/Traycer/releases).
+- The installer creates a Start Menu shortcut and offers optional desktop and "Start with Windows" choices (unchecked by default).
+- Traycer checks GitHub Releases daily for updates. You can force a check or trigger a winget/installer upgrade from the tray icon menu.
+- Silent install switches follow Inno Setup conventions: `/VERYSILENT /NORESTART` for fully silent, `/SILENT /NORESTART` to show minimal UI.
+
+## Release Automation
+
+- Pushes and pull requests against `main` run a Windows build, optional tests, and publish a self-contained artifact (`.github/workflows/ci.yml`).
+- [release-please](https://github.com/googleapis/release-please) manages semantic versioning, CHANGELOG updates, and release PRs (`.github/workflows/release-please.yml`).
+- Tagging `vX.Y.Z` runs `.github/workflows/release-tag.yml` to publish the app, build/sign the installer, attach assets to the GitHub Release, and optionally open a winget PR when secrets are provided.
+
 ## Documentation
 
 - [Getting Started](docs/articles/getting-started.md)
@@ -43,3 +56,5 @@ dotnet docfx build
 The generated site is emitted to `docs/_site/` (ignored from source control). Open `_site/index.html` in a browser to browse the pages.
 
 Issues and pull requests are welcome. Please run `dotnet format` and the build/test suite before submitting changes.
+
+

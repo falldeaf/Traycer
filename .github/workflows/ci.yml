@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore src/Traycer.csproj
+
+      - name: Detect test projects
+        id: detect-tests
+        shell: pwsh
+        run: |
+          $tests = Get-ChildItem -Recurse -Filter '*Tests.csproj'
+          if ($tests) {
+            'has_tests=true' >> $env:GITHUB_OUTPUT
+            $tests | ForEach-Object { Write-Host "Found test project: $($_.FullName)" }
+          }
+          else {
+            'has_tests=false' >> $env:GITHUB_OUTPUT
+            Write-Host 'No test projects detected'
+          }
+
+      - name: Build
+        run: dotnet build src/Traycer.csproj --configuration Release --no-restore
+
+      - name: Run tests
+        if: steps.detect-tests.outputs.has_tests == 'true'
+        run: dotnet test --configuration Release --no-build
+
+      - name: Publish self-contained artifact
+        run: >-
+          dotnet publish src/Traycer.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --no-build
+          --output out/win-x64
+          /p:PublishSingleFile=true
+          /p:IncludeNativeLibrariesForSelfExtract=true
+          /p:IncludeAllContentForSelfExtract=true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: traycer-win-x64
+          path: out/win-x64
