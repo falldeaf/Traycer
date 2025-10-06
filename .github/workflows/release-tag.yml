@@ -61,19 +61,20 @@ jobs:
           if (-not (Test-Path $iscc)) { throw "ISCC not found at $iscc" }
           & $iscc "installer\Traycer.iss" /DMyAppVersion=${{ steps.vars.outputs.version }} /DMySourceDir="$publishDir"
 
-      - name: Package portable zip
+      - name: Prepare portable executable
         shell: pwsh
         run: |
           $publishDir = Join-Path $PWD 'dist/Traycer'
           $portableDir = Join-Path $PWD 'dist/portable'
-          $zipPath = Join-Path $portableDir ('TraycerPortable_' + '${{ steps.vars.outputs.version }}.zip')
+          $sourceExe = Join-Path $publishDir 'Traycer.exe'
+          $portableExe = Join-Path $portableDir ('TraycerPortable_' + '${{ steps.vars.outputs.version }}.exe')
           if (-not (Test-Path $portableDir)) {
             New-Item -ItemType Directory -Path $portableDir | Out-Null
           }
-          if (Test-Path $zipPath) {
-            Remove-Item $zipPath -Force
+          if (-not (Test-Path $sourceExe)) {
+            throw "Portable executable source not found at $sourceExe"
           }
-          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath
+          Copy-Item -Path $sourceExe -Destination $portableExe -Force
 
       - name: Compute SHA-256
         id: checksum
@@ -87,8 +88,8 @@ jobs:
         id: portable-checksum
         shell: pwsh
         run: |
-          $zipPath = Join-Path $PWD ('dist/portable/TraycerPortable_' + '${{ steps.vars.outputs.version }}.zip')
-          $hash = (Get-FileHash $zipPath -Algorithm SHA256).Hash
+          $exePath = Join-Path $PWD ('dist/portable/TraycerPortable_' + '${{ steps.vars.outputs.version }}.exe')
+          $hash = (Get-FileHash $exePath -Algorithm SHA256).Hash
           "sha256=$hash" >> $env:GITHUB_OUTPUT
 
       - name: Write checksum file
@@ -105,7 +106,7 @@ jobs:
         run: |
           $portableDir = Join-Path $PWD 'dist/portable'
           $hash = '${{ steps.portable-checksum.outputs.sha256 }}'
-          $fileName = 'TraycerPortable_${{ steps.vars.outputs.version }}.zip'
+          $fileName = 'TraycerPortable_${{ steps.vars.outputs.version }}.exe'
           $content = "$hash  $fileName"
           Set-Content -Path (Join-Path $portableDir ($fileName + '.sha256')) -Value $content -Encoding ASCII
 
@@ -126,8 +127,8 @@ jobs:
           files: |
             dist/installer/${{ steps.vars.outputs.setup_name }}
             dist/installer/${{ steps.vars.outputs.setup_name }}.sha256
-            dist/portable/TraycerPortable_${{ steps.vars.outputs.version }}.zip
-            dist/portable/TraycerPortable_${{ steps.vars.outputs.version }}.zip.sha256
+            dist/portable/TraycerPortable_${{ steps.vars.outputs.version }}.exe
+            dist/portable/TraycerPortable_${{ steps.vars.outputs.version }}.exe.sha256
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
