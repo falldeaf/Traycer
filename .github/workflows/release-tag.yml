@@ -10,8 +10,6 @@ jobs:
     runs-on: windows-latest
     env:
       PACKAGE_IDENTIFIER: ThomasMardis.Traycer
-      CODESIGN_PFX: ${{ secrets.CODESIGN_PFX }}
-      CODESIGN_PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
       WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
 
     steps:
@@ -51,19 +49,6 @@ jobs:
             /p:IncludeAllContentForSelfExtract=true `
             /p:Version=${{ steps.vars.outputs.version }}
 
-      - name: Code sign application binaries (optional)
-        if: env.CODESIGN_PFX != ''
-        shell: pwsh
-        run: |
-          $certPath = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
-          [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:CODESIGN_PFX))
-          $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10' -Recurse -Filter signtool.exe | Sort-Object FullName | Select-Object -First 1
-          if (-not $signtool) { throw 'signtool.exe not found' }
-          Get-ChildItem dist/Traycer -Filter *.exe -Recurse | ForEach-Object {
-            & $signtool.FullName sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f $certPath /p $env:CODESIGN_PFX_PASSWORD $_.FullName
-          }
-          Remove-Item $certPath -ErrorAction SilentlyContinue
-
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress --yes
@@ -75,19 +60,6 @@ jobs:
           $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
           if (-not (Test-Path $iscc)) { throw "ISCC not found at $iscc" }
           & $iscc "installer\Traycer.iss" /DMyAppVersion=${{ steps.vars.outputs.version }} /DMySourceDir="$publishDir"
-
-      - name: Code sign installer (optional)
-        if: env.CODESIGN_PFX != ''
-        shell: pwsh
-        run: |
-          $installerPath = Join-Path $PWD ('dist/installer/' + '${{ steps.vars.outputs.setup_name }}')
-          if (-not (Test-Path $installerPath)) { throw "Installer not found at $installerPath" }
-          $certPath = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
-          [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:CODESIGN_PFX))
-          $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10' -Recurse -Filter signtool.exe | Sort-Object FullName | Select-Object -First 1
-          if (-not $signtool) { throw 'signtool.exe not found' }
-          & $signtool.FullName sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f $certPath /p $env:CODESIGN_PFX_PASSWORD $installerPath
-          Remove-Item $certPath -ErrorAction SilentlyContinue
 
       - name: Compute SHA-256
         id: checksum
