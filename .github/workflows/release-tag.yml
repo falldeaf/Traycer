@@ -61,12 +61,34 @@ jobs:
           if (-not (Test-Path $iscc)) { throw "ISCC not found at $iscc" }
           & $iscc "installer\Traycer.iss" /DMyAppVersion=${{ steps.vars.outputs.version }} /DMySourceDir="$publishDir"
 
+      - name: Package portable zip
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $PWD 'dist/Traycer'
+          $portableDir = Join-Path $PWD 'dist/portable'
+          $zipPath = Join-Path $portableDir ('TraycerPortable_' + '${{ steps.vars.outputs.version }}.zip')
+          if (-not (Test-Path $portableDir)) {
+            New-Item -ItemType Directory -Path $portableDir | Out-Null
+          }
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath
+
       - name: Compute SHA-256
         id: checksum
         shell: pwsh
         run: |
           $installerPath = Join-Path $PWD ('dist/installer/' + '${{ steps.vars.outputs.setup_name }}')
           $hash = (Get-FileHash $installerPath -Algorithm SHA256).Hash
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
+
+      - name: Compute portable SHA-256
+        id: portable-checksum
+        shell: pwsh
+        run: |
+          $zipPath = Join-Path $PWD ('dist/portable/TraycerPortable_' + '${{ steps.vars.outputs.version }}.zip')
+          $hash = (Get-FileHash $zipPath -Algorithm SHA256).Hash
           "sha256=$hash" >> $env:GITHUB_OUTPUT
 
       - name: Write checksum file
@@ -77,6 +99,15 @@ jobs:
           $fileName = '${{ steps.vars.outputs.setup_name }}'
           $content = "$hash  $fileName"
           Set-Content -Path (Join-Path $installerDir ($fileName + '.sha256')) -Value $content -Encoding ASCII
+
+      - name: Write portable checksum file
+        shell: pwsh
+        run: |
+          $portableDir = Join-Path $PWD 'dist/portable'
+          $hash = '${{ steps.portable-checksum.outputs.sha256 }}'
+          $fileName = 'TraycerPortable_${{ steps.vars.outputs.version }}.zip'
+          $content = "$hash  $fileName"
+          Set-Content -Path (Join-Path $portableDir ($fileName + '.sha256')) -Value $content -Encoding ASCII
 
       - name: Prepare asset metadata
         id: asset-info
@@ -95,6 +126,8 @@ jobs:
           files: |
             dist/installer/${{ steps.vars.outputs.setup_name }}
             dist/installer/${{ steps.vars.outputs.setup_name }}.sha256
+            dist/portable/TraycerPortable_${{ steps.vars.outputs.version }}.zip
+            dist/portable/TraycerPortable_${{ steps.vars.outputs.version }}.zip.sha256
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

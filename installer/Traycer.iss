@@ -39,7 +39,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
-Name: "autostart"; Description: "Start Traycer when Windows starts"; GroupDescription: "Startup options:"; Flags: unchecked
+Name: "autostart"; Description: "Launch Traycer automatically when you sign in"; GroupDescription: "Startup options:"; Flags: checkedonce
 
 [Files]
 Source: "{#MySourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -50,6 +50,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyExeName}"; Tasks: deskt
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: '"{app}\{#MyExeName}"'; Tasks: autostart; Flags: uninsdeletevalue
+Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: '"{app}\{#MyExeName}"'; Tasks: autostart; Flags: uninsdeletevalue noerror
 
 [Run]
 Filename: "{app}\{#MyExeName}"; Description: "Launch Traycer HUD"; Flags: nowait postinstall skipifsilent
