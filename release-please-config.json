@@ -3,14 +3,13 @@
     {
       "branch": "main",
       "handleMergeConflicts": true,
-      "releaseType": "dotnet",
+      "releaseType": "dotnet-yoshi",
       "packageName": "Traycer"
     }
   ],
   "packages": {
     ".": {
-      "path": ".",
-      "releaseType": "dotnet",
+      "releaseType": "dotnet-yoshi",
       "extraFiles": [
         "src/Traycer.csproj"
       ]

@@ -33,7 +33,7 @@ jobs:
           'setup_name=TraycerSetup_' + $tag + '.exe' >> $env:GITHUB_OUTPUT
 
       - name: Restore dependencies
-        run: dotnet restore src/Traycer.csproj
+        run: dotnet restore src/Traycer.csproj --runtime win-x64
 
       - name: Publish application
         shell: pwsh
