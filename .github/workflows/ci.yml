@@ -22,7 +22,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore src/Traycer.csproj
+        run: dotnet restore src/Traycer.csproj --runtime win-x64
 
       - name: Detect test projects
         id: detect-tests
