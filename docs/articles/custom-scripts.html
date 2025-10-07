@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Custom Script Tutorial | Traycer HUD </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Custom Script Tutorial | Traycer HUD ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/falldeaf/Traycer/blob/main/docs-src/articles/custom-scripts.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/traycer-icon.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="custom-script-tutorial">Custom Script Tutorial</h1>
+
+<p>This walkthrough covers two common ways to drive Traycer wells with your own automation scripts: a timer-style job that runs, updates, and exits, and a long-lived daemon that stays connected to the named pipe.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>Traycer HUD running locally.</li>
+<li>A language/runtime capable of writing UTF-8 lines to the named pipe <code>\\.\pipe\TraycerHud</code> (examples below use PowerShell and Python).</li>
+</ul>
+<h2 id="pattern-1-timer-job">Pattern 1: Timer job</h2>
+<p>Use a script that performs a single update and exit. Pair it with either Windows Task Scheduler or a Traycer <code>once</code> task to run it on a cadence.</p>
+<p>Example PowerShell script (<code>scripts/update-weather.ps1</code>):</p>
+<pre><code class="lang-powershell">param(
+    [string]$Well = &quot;weather&quot;
+)
+
+$payload = @{
+    op   = &quot;set&quot;
+    well = $Well
+    text = &quot;🌦️  $(Get-Date -Format 't')&quot;
+    bg   = &quot;#33223333&quot;
+} | ConvertTo-Json -Compress
+
+$pipe = new-object System.IO.Pipes.NamedPipeClientStream('.', 'TraycerHud', [System.IO.Pipes.PipeDirection]::Out)
+$pipe.Connect(2000)
+$writer = new-object System.IO.StreamWriter($pipe, New-Object System.Text.UTF8Encoding($false))
+$writer.AutoFlush = $true
+$writer.WriteLine($payload)
+$writer.Dispose(); $pipe.Dispose()
+</code></pre>
+<p>Schedule it every five minutes (Task Scheduler) or add to the defaults:</p>
+<pre><code class="lang-json">{
+  &quot;id&quot;: &quot;weather-poll&quot;,
+  &quot;command&quot;: &quot;pwsh&quot;,
+  &quot;args&quot;: &quot;-File \&quot;scripts/update-weather.ps1\&quot;&quot;,
+  &quot;mode&quot;: &quot;schedule&quot;,
+  &quot;autoStart&quot;: true,
+  &quot;schedule&quot;: { &quot;frequency&quot;: &quot;minute&quot;, &quot;interval&quot;: 5 }
+}
+</code></pre>
+<h2 id="pattern-2-background-daemon">Pattern 2: Background daemon</h2>
+<p>For continuous feeds, keep the script connected to the pipe, emit updates as needed, and clean up on exit.</p>
+<p>Example Python daemon (<code>scripts/stock_daemon.py</code>):</p>
+<pre><code class="lang-python">import json
+import os
+import sys
+import time
+import ctypes
+from ctypes import wintypes
+
+PIPE_NAME = r&quot;\\.\pipe\TraycerHud&quot;
+WELL_ID = &quot;stocks&quot;
+
+class Pipe:
+    def __enter__(self):
+        while True:
+            try:
+                self.handle = open(PIPE_NAME, &quot;w&quot;, encoding=&quot;utf-8&quot;, newline=&quot;\n&quot;)
+                break
+            except OSError:
+                time.sleep(0.5)
+        return self
+
+    def send(self, payload):
+        self.handle.write(json.dumps(payload, ensure_ascii=False) + &quot;\n&quot;)
+        self.handle.flush()
+
+    def __exit__(self, exc_type, exc, tb):
+        self.handle.close()
+
+if __name__ == &quot;__main__&quot;:
+    try:
+        with Pipe() as pipe:
+            pipe.send({&quot;op&quot;: &quot;add&quot;, &quot;well&quot;: WELL_ID, &quot;width&quot;: 220})
+            pipe.send({&quot;op&quot;: &quot;set&quot;, &quot;well&quot;: WELL_ID, &quot;text&quot;: &quot;📈 Initializing&quot;})
+            while True:
+                price = fetch_price_somehow()
+                pipe.send({&quot;op&quot;: &quot;set&quot;, &quot;well&quot;: WELL_ID, &quot;text&quot;: f&quot;📈 {price:$}&quot;})
+                time.sleep(10)
+    except KeyboardInterrupt:
+        with Pipe() as pipe:
+            pipe.send({&quot;op&quot;: &quot;remove&quot;, &quot;well&quot;: WELL_ID})
+</code></pre>
+<p>Key ideas:</p>
+<ul>
+<li>Ensure the script retries connecting to the pipe until Traycer is ready.</li>
+<li>Send an <code>add</code> message once to create the well dynamically.</li>
+<li>On shutdown, remove the well so the HUD stays tidy.</li>
+</ul>
+<h2 id="testing-tips">Testing tips</h2>
+<ul>
+<li>Use <code>pwsh -Command &quot;Get-Content -Wait -Path \&quot;\\.\pipe\TraycerHud\&quot;&quot;</code> in a second console to inspect outgoing messages.</li>
+<li>Wrap long-running scripts in Traycer <code>once</code> tasks with <code>autoStart</code> to manage their lifecycle through the tray menu.</li>
+<li>Remember that all messages must be UTF-8 and newline-terminated.</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/falldeaf/Traycer/blob/main/docs-src/articles/custom-scripts.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Traycer HUD Documentation
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

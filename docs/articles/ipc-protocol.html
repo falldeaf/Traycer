@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>IPC JSON Protocol | Traycer HUD </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="IPC JSON Protocol | Traycer HUD ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/falldeaf/Traycer/blob/main/docs-src/articles/ipc-protocol.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/traycer-icon.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ipc-json-protocol">IPC JSON Protocol</h1>
+
+<p>Traycer listens on the named pipe <code>\\.\pipe\TraycerHud</code> for newline-delimited UTF-8 JSON payloads. Each message is applied immediately and the pipe remains one-way—no acknowledgements are sent.</p>
+<h2 id="colors">Colors</h2>
+<p>Color fields accept <code>#RRGGBB</code>, <code>#AARRGGBB</code>, <code>0xAARRGGBB</code>, or <code>hex:AARRGGBB</code> formats.</p>
+<h2 id="click-actions">Click actions</h2>
+<p>A well may define an <code>action</code> that runs when the user left-clicks while click-through mode is <strong>off</strong> (toggle with <strong>Win+Alt+H</strong>).</p>
+<ul>
+<li>If the action string contains <code>://</code>, it is launched via the shell.</li>
+<li>Otherwise Traycer executes <code>cmd.exe /c &lt;action&gt;</code>.</li>
+</ul>
+<h2 id="operations">Operations</h2>
+<h3 id="placement"><code>placement</code></h3>
+<p>Adjust the HUD geometry for the current session.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;placement&quot;,&quot;height&quot;:24,&quot;bottomOffset&quot;:2,&quot;padding&quot;:6,&quot;cornerRadius&quot;:8}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>height</code></td>
+<td>Content height in pixels</td>
+</tr>
+<tr>
+<td><code>bottomOffset</code></td>
+<td>Offset from the screen bottom in pixels</td>
+</tr>
+<tr>
+<td><code>padding</code></td>
+<td>Outer and inner padding in pixels</td>
+</tr>
+<tr>
+<td><code>cornerRadius</code></td>
+<td>Corner radius in pixels</td>
+</tr>
+</tbody>
+</table>
+<h3 id="config"><code>config</code></h3>
+<p>Replace <strong>all</strong> wells with the supplied collection.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;config&quot;,&quot;wells&quot;:[{&quot;id&quot;:&quot;weather&quot;,&quot;width&quot;:240},{&quot;id&quot;:&quot;build&quot;,&quot;width&quot;:180}]}
+</code></pre>
+<p>Each entry supplies:</p>
+<ul>
+<li><code>id</code> – unique well identifier</li>
+<li><code>width</code> – width in pixels</li>
+</ul>
+<h3 id="add"><code>add</code></h3>
+<p>Insert a well without clearing existing wells.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;add&quot;,&quot;well&quot;:&quot;alerts&quot;,&quot;width&quot;:160,&quot;index&quot;:2}
+</code></pre>
+<ul>
+<li>If <code>index</code> is omitted, the well is appended.</li>
+<li>Supplying an existing <code>well</code> id resizes that column instead.</li>
+</ul>
+<h3 id="remove"><code>remove</code></h3>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;remove&quot;,&quot;well&quot;:&quot;ram&quot;}
+</code></pre>
+<h3 id="resize"><code>resize</code></h3>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;resize&quot;,&quot;well&quot;:&quot;weather&quot;,&quot;width&quot;:300}
+</code></pre>
+<h3 id="set"><code>set</code></h3>
+<p>Set text, styling, and action for a single well.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;build&quot;,&quot;text&quot;:&quot;✔ Passing&quot;,&quot;bg&quot;:&quot;#33305533&quot;,&quot;fg&quot;:&quot;#FFFFFF&quot;,&quot;blink&quot;:false,&quot;action&quot;:&quot;start https://ci.example.com&quot;}
+</code></pre>
+<p>Fields:</p>
+<ul>
+<li><code>text</code> – label content (emoji supported)</li>
+<li><code>fg</code>, <code>bg</code> – colors (see formats above)</li>
+<li><code>blink</code> – boolean hint used for emphasis styling</li>
+<li><code>action</code> – command or URL to run on click</li>
+</ul>
+<h3 id="bulk"><code>bulk</code></h3>
+<p>Apply multiple <code>set</code> updates in a single message.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;bulk&quot;,&quot;updates&quot;:[
+  {&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;net&quot;,&quot;text&quot;:&quot;📶  142 Mbps&quot;},
+  {&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;cpu&quot;,&quot;text&quot;:&quot;🖥️  34%&quot;},
+  {&quot;op&quot;:&quot;set&quot;,&quot;well&quot;:&quot;ram&quot;,&quot;text&quot;:&quot;📦  61%&quot;}
+]}
+</code></pre>
+<h3 id="bind"><code>bind</code></h3>
+<p>Bind or update an action without touching text or colors.</p>
+<pre><code class="lang-json">{&quot;op&quot;:&quot;bind&quot;,&quot;well&quot;:&quot;meeting&quot;,&quot;action&quot;:&quot;start https://meet.example.com/room&quot;}
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/falldeaf/Traycer/blob/main/docs-src/articles/ipc-protocol.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Traycer HUD Documentation
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

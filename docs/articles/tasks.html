@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Background Tasks | Traycer HUD </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Background Tasks | Traycer HUD ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/falldeaf/Traycer/blob/main/docs-src/articles/tasks.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/traycer-icon.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="background-tasks">Background Tasks</h1>
+
+<p>Traycer can manage external processes through the defaults file and the tray menu. Tasks let you launch one-off commands on startup or register jobs with Windows Task Scheduler.</p>
+<h2 id="defining-tasks">Defining tasks</h2>
+<p>Add a <code>tasks</code> array to <code>traycer.defaults.json</code>. Each entry uses the following fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>Unique identifier displayed in the tray menu.</td>
+</tr>
+<tr>
+<td><code>command</code></td>
+<td>Executable to launch (absolute path or relative to the Traycer binary).</td>
+</tr>
+<tr>
+<td><code>args</code></td>
+<td>Optional arguments string (environment variables are expanded).</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>Either <code>&quot;once&quot;</code> for direct process launches or <code>&quot;schedule&quot;</code> for Task Scheduler integration.</td>
+</tr>
+<tr>
+<td><code>autoStart</code></td>
+<td>When <code>true</code>, Traycer starts the task on launch (or immediately queues the scheduled task).</td>
+</tr>
+<tr>
+<td><code>workingDirectory</code></td>
+<td>Optional working directory; relative paths resolve against the app directory.</td>
+</tr>
+<tr>
+<td><code>schedule</code></td>
+<td>Required when <code>mode</code> is <code>&quot;schedule&quot;</code>; see below.</td>
+</tr>
+</tbody>
+</table>
+<p>Example:</p>
+<pre><code class="lang-json">&quot;tasks&quot;: [
+  {
+    &quot;id&quot;: &quot;weather-refresh&quot;,
+    &quot;command&quot;: &quot;python.exe&quot;,
+    &quot;args&quot;: &quot;\&quot;scripts/weather.py\&quot; 47.61 -122.33&quot;,
+    &quot;mode&quot;: &quot;once&quot;,
+    &quot;autoStart&quot;: true,
+    &quot;workingDirectory&quot;: &quot;..&quot;
+  },
+  {
+    &quot;id&quot;: &quot;calendar-loop&quot;,
+    &quot;command&quot;: &quot;pythonw.exe&quot;,
+    &quot;args&quot;: &quot;\&quot;scripts/calendar_overview.py\&quot; https://example.com/private.ics&quot;,
+    &quot;mode&quot;: &quot;schedule&quot;,
+    &quot;autoStart&quot;: true,
+    &quot;schedule&quot;: {
+      &quot;frequency&quot;: &quot;minute&quot;,
+      &quot;interval&quot;: 5,
+      &quot;start&quot;: &quot;06:00&quot;
+    }
+  }
+]
+</code></pre>
+<h2 id="scheduled-triggers">Scheduled triggers</h2>
+<p>When <code>mode</code> is <code>&quot;schedule&quot;</code>, provide a <code>schedule</code> object:</p>
+<ul>
+<li><code>frequency</code> – <code>minute</code>, <code>hour</code>, <code>hours</code>, <code>daily</code>, <code>day</code>, <code>logon</code>, or <code>once</code>.</li>
+<li><code>interval</code> – optional integer controlling repetition. For example, <code>frequency: &quot;minute&quot;</code> with <code>interval: 5</code> runs every five minutes.</li>
+<li><code>start</code> – optional <code>HH:mm</code> time for the first run.</li>
+</ul>
+<p>Traycer registers the task under the <code>Traycer</code> folder in Task Scheduler using the current interactive user. When the app exits it cleans up any scheduled entries it created.</p>
+<h2 id="tray-controls">Tray controls</h2>
+<p>Open the Traycer notify icon to see a <strong>Tasks</strong> submenu. Options vary by mode:</p>
+<ul>
+<li><strong>Run now</strong> – launches the process or immediately triggers the scheduled job.</li>
+<li><strong>Kill process</strong> – available for <code>once</code> tasks currently running.</li>
+<li><strong>Stop</strong> – cancels a scheduled task that is currently active.</li>
+</ul>
+<p>Traycer keeps track of running processes and displays their PID next to the task name when available.</p>
+<h2 id="tips">Tips</h2>
+<ul>
+<li>Use <code>pythonw.exe</code> (or similar) for scheduled jobs when you want a windowless experience.</li>
+<li>Set <code>autoStart</code> to <code>false</code> for manual utilities you only trigger from the tray menu.</li>
+<li>Combine tasks with IPC scripts to automate well updates on a cadence.</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/falldeaf/Traycer/blob/main/docs-src/articles/tasks.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Traycer HUD Documentation
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

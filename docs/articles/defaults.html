@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Defaults Configuration | Traycer HUD </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Defaults Configuration | Traycer HUD ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/falldeaf/Traycer/blob/main/docs-src/articles/defaults.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/traycer-icon.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="defaults-configuration">Defaults Configuration</h1>
+
+<p>Traycer requires a defaults file before the HUD can render. This article explains where the file lives, how it is discovered, and the sections you can use to seed layout, text, actions, and background tasks.</p>
+<h2 id="file-location">File location</h2>
+<p>Traycer searches for <code>traycer.defaults.json</code> in the following order:</p>
+<ol>
+<li><code>AppContext.BaseDirectory\traycer.defaults.json</code> – beside the executable.</li>
+<li><code>%LOCALAPPDATA%\Traycer\traycer.defaults.json</code> – the per-user copy.</li>
+<li>Path referenced by the <code>TRAYCER_DEFAULTS</code> environment variable – highest priority.</li>
+</ol>
+<p>The first existing file wins. If none are found, Traycer prompts to create a template under <code>%LOCALAPPDATA%\Traycer</code> using the bundled sample.</p>
+<h2 id="minimal-template">Minimal template</h2>
+<pre><code class="lang-json">{
+  &quot;placement&quot;: { &quot;height&quot;: 24, &quot;bottomOffset&quot;: 2, &quot;padding&quot;: 6, &quot;cornerRadius&quot;: 8 },
+  &quot;wells&quot;: [
+    { &quot;id&quot;: &quot;weather&quot;, &quot;width&quot;: 240 },
+    { &quot;id&quot;: &quot;build&quot;,   &quot;width&quot;: 180 }
+  ],
+  &quot;updates&quot;: [
+    { &quot;well&quot;: &quot;weather&quot;, &quot;text&quot;: &quot;🌦️ 73°F&quot;, &quot;bg&quot;: &quot;#33223333&quot; }
+  ]
+}
+</code></pre>
+<p>Each top-level section is optional, but the file itself must be valid JSON. Keys are case-insensitive.</p>
+<h3 id="placement">placement</h3>
+<p>Controls initial window geometry.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>height</code></td>
+<td>Content height in pixels.</td>
+</tr>
+<tr>
+<td><code>bottomOffset</code></td>
+<td>Distance from the bottom edge of the primary display.</td>
+</tr>
+<tr>
+<td><code>padding</code></td>
+<td>Applied to the window chrome and well content.</td>
+</tr>
+<tr>
+<td><code>cornerRadius</code></td>
+<td>Radius for the outer frame.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="wells">wells</h3>
+<p>Defines the columns rendered on startup. Each entry supplies:</p>
+<ul>
+<li><code>id</code> – unique identifier used for IPC updates and tray actions.</li>
+<li><code>width</code> – initial width in pixels.</li>
+<li><code>index</code> (optional) – absolute position. When omitted, file order is used.</li>
+</ul>
+<p>Use runtime messages (<code>add</code>, <code>remove</code>, <code>resize</code>) for incremental layout tweaks once the HUD is running.</p>
+<h3 id="updates">updates</h3>
+<p>Seeds well text/color/action state the moment the HUD loads. You can include the same fields accepted by the <code>set</code> IPC operation:</p>
+<ul>
+<li><code>text</code> – label content. Emoji are supported.</li>
+<li><code>fg</code> / <code>bg</code> – hex colors, e.g. <code>#RRGGBB</code>, <code>#AARRGGBB</code>, <code>hex:33223333</code>.</li>
+<li><code>blink</code> – boolean accent hint.</li>
+<li><code>action</code> – command or URL invoked on click while click-through is disabled.</li>
+</ul>
+<h3 id="tasks">tasks</h3>
+<p>Optional array for background work managed through the tray icon. See <a href="tasks.html">Background Tasks</a> for full details.</p>
+<h3 id="actions">actions</h3>
+<p>Top-level dictionary mapping well IDs to action strings. This is a shorthand for seeding click handlers when you do not need to set text or colors.</p>
+<h2 id="editing-tips">Editing tips</h2>
+<ul>
+<li>Keep a copy of the template under source control and sync it to <code>%LOCALAPPDATA%</code> during deployment.</li>
+<li>Validate JSON with <code>pwsh</code> or any linter before running Traycer; the HUD exits on parse errors.</li>
+<li>When iterating on layout, start with the defaults file and then fine-tune at runtime with IPC messages until the layout feels right.</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/falldeaf/Traycer/blob/main/docs-src/articles/defaults.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Traycer HUD Documentation
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
