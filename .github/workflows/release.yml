@@ -2,12 +2,8 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
-
-concurrency:
-  group: release
-  cancel-in-progress: false
+    tags:
+      - 'v*.*'
 
 jobs:
   publish:
@@ -29,53 +25,18 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Determine version
+      - name: Derive version from tag
         id: version
         shell: pwsh
         run: |
-          $versionPath = Join-Path $PWD 'VERSION'
-          if (-not (Test-Path $versionPath)) {
-            throw "VERSION file not found at $versionPath"
+          $tag = "${{ github.ref_name }}"
+          if (-not $tag) {
+            throw "GITHUB_REF_NAME was empty; this workflow must run from a tag."
           }
-
-          $raw = (Get-Content $versionPath -Raw).Trim()
-          if (-not $raw) {
-            throw "VERSION file is empty."
+          if ($tag -notmatch '^v\d+\.\d+$') {
+            throw "Tag '$tag' must match the format v<major>.<minor> (e.g. v1.2)."
           }
-          if ($raw -notmatch '^\d+\.\d+$') {
-            throw "VERSION must be in 'major.minor' format (e.g. 1.7)."
-          }
-
-          $requested = [version]::Parse("$raw.0")
-
-          git fetch --tags --force | Out-Null
-          $latestTag = (git tag --list 'v*.*' --sort=-v:refname | Select-Object -First 1)
-
-          if ([string]::IsNullOrWhiteSpace($latestTag)) {
-            $target = $requested
-          }
-          else {
-            $latestVersionString = $latestTag.Trim().TrimStart('v')
-            try {
-              $latest = [version]::Parse("$latestVersionString.0")
-            }
-            catch {
-              throw "Existing tag $latestTag is not in expected v<major>.<minor> format."
-            }
-
-            if ($requested.Major -gt $latest.Major -or ($requested.Major -eq $latest.Major -and $requested.Minor -gt $latest.Minor)) {
-              $target = $requested
-            }
-            else {
-              $target = [version]::new($latest.Major, $latest.Minor + 1)
-            }
-          }
-
-          $version = '{0}.{1}' -f $target.Major, $target.Minor
-          $tag = "v$version"
-
-          Write-Host "Next release: version=$version tag=$tag"
-
+          $version = $tag.TrimStart('v')
           "version=$version" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
           "setup_name=TraycerSetup_$version.exe" >> $env:GITHUB_OUTPUT
