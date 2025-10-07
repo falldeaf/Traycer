@@ -88,9 +88,4 @@ env/
 *.env
 
 # DocFX
-/docs/_site/
-/docs/api/
-/docs/.manifest
-/docs/obj/
 docfx.log
-public/
