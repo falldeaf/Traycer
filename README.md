@@ -31,29 +31,32 @@ Traycer is a lightweight Windows overlay that keeps a strip of live "wells" pinn
 ## Release Automation
 
 - Pushes and pull requests against `main` run a Windows build, optional tests, and publish a self-contained artifact (`.github/workflows/ci.yml`).
-- [release-please](https://github.com/googleapis/release-please) manages semantic versioning, CHANGELOG updates, and release PRs (`.github/workflows/release-please.yml`).
-- Tagging `vX.Y.Z` runs `.github/workflows/release-tag.yml` to publish the app, build/sign the installer, attach assets to the GitHub Release, and optionally open a winget PR when secrets are provided.
+- Creating a git tag in the form `v<major>.<minor>` (for example `git tag v1.2 && git push origin v1.2`) triggers the release workflow (`.github/workflows/release.yml`). That job:
+  - Builds the self-contained publish, Inno installer, and portable single-file executable.
+  - Uploads installer + portable binaries (and checksums) to the matching GitHub Release.
+  - Optionally updates winget when the `WINGET_TOKEN` secret is configured.
+- Versioning is purely manual: choose the next `vX.Y` tag you want to ship.
 
 ## Documentation
 
-- [Getting Started](docs/articles/getting-started.md)
-- [IPC JSON Protocol](docs/articles/ipc-protocol.md)
-- [Defaults Configuration](docs/articles/defaults.md)
-- [Background Tasks](docs/articles/tasks.md)
-- [Custom Script Tutorial](docs/articles/custom-scripts.md)
-- API Reference *(generate locally with DocFX; instructions below)*
+- Hosted docs: <https://thomas-mardis.github.io/Traycer/>
+- Source articles live under `docs-src/`; the generated static site (served by GitHub Pages) is committed in `docs/`.
+- Key topics:
+  - [Getting Started](https://thomas-mardis.github.io/Traycer/articles/getting-started.html)
+  - [IPC JSON Protocol](https://thomas-mardis.github.io/Traycer/articles/ipc-protocol.html)
+  - [Defaults Configuration](https://thomas-mardis.github.io/Traycer/articles/defaults.html)
+  - [Background Tasks](https://thomas-mardis.github.io/Traycer/articles/tasks.html)
+  - [Custom Script Tutorial](https://thomas-mardis.github.io/Traycer/articles/custom-scripts.html)
+  - [API Reference](https://thomas-mardis.github.io/Traycer/api/)
 
-Generate the documentation site locally:
+Generate (and update) the documentation site locally:
 
 ```powershell
-dotnet tool restore
-cd docs
-# produce YAML metadata and the static site
-dotnet docfx metadata
-dotnet docfx build
+docfx metadata docs-src/docfx.json
+docfx build docs-src/docfx.json
 ```
 
-The generated site is emitted to `docs/_site/` (ignored from source control). Open `_site/index.html` in a browser to browse the pages.
+The commands emit YAML metadata under `docs-src/api/` and write the final static site to `docs/`. Commit both `docs/` and `docs-src/api/` so GitHub Pages stays in sync.
 
 Issues and pull requests are welcome. Please run `dotnet format` and the build/test suite before submitting changes.
 
