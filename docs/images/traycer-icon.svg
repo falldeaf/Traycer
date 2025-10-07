@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512"
+     xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Traycer icon, full-bleed">
+  <defs>
+    <style>
+      .bg { fill: #0B1220; }     /* deep navy */
+      .accent { fill: #59F7AE; } /* neon green */
+    </style>
+  </defs>
+
+  <!-- Background: edge-to-edge rounded square -->
+  <rect class="bg" x="0" y="0" width="512" height="512" rx="64"/>
+
+  <!-- Three bars, centered -->
+  <rect class="accent" x="116" y="116" width="78" height="280" rx="24"/>
+  <rect class="accent" x="217" y="116" width="78" height="280" rx="24"/>
+  <rect class="accent" x="318" y="116" width="78" height="280" rx="24"/>
+</svg>
