@@ -48,8 +48,8 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyExeName}"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: '"{app}\{#MyExeName}"'; Tasks: autostart; Flags: uninsdeletevalue
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: '"{app}\{#MyExeName}"'; Tasks: autostart; Flags: uninsdeletevalue noerror
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyExeName}"""; Tasks: autostart; Flags: uninsdeletevalue
+Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyExeName}"""; Tasks: autostart; Flags: uninsdeletevalue noerror
 
 [Run]
 Filename: "{app}\{#MyExeName}"; Description: "Launch Traycer HUD"; Flags: nowait postinstall skipifsilent
