@@ -1,0 +1,9 @@
+{
+  "Traycer": "Traycer.yml",
+  "Traycer.App": "Traycer.App.yml",
+  "Traycer.App.InitializeComponent": "Traycer.App.yml",
+  "Traycer.App.Main": "Traycer.App.yml",
+  "Traycer.MainWindow": "Traycer.MainWindow.yml",
+  "Traycer.MainWindow.#ctor": "Traycer.MainWindow.yml",
+  "Traycer.MainWindow.InitializeComponent": "Traycer.MainWindow.yml"
+}

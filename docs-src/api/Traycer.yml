@@ -1,0 +1,30 @@
+### YamlMime:ManagedReference
+items:
+- uid: Traycer
+  commentId: N:Traycer
+  id: Traycer
+  children:
+  - Traycer.App
+  - Traycer.MainWindow
+  langs:
+  - csharp
+  - vb
+  name: Traycer
+  nameWithType: Traycer
+  fullName: Traycer
+  type: Namespace
+  assemblies:
+  - Traycer
+references:
+- uid: Traycer.App
+  commentId: T:Traycer.App
+  href: Traycer.App.html
+  name: App
+  nameWithType: App
+  fullName: Traycer.App
+- uid: Traycer.MainWindow
+  commentId: T:Traycer.MainWindow
+  href: Traycer.MainWindow.html
+  name: MainWindow
+  nameWithType: MainWindow
+  fullName: Traycer.MainWindow
