@@ -47,7 +47,7 @@ Traycer is a lightweight Windows overlay that keeps a strip of live "wells" pinn
   - [Defaults Configuration](https://falldeaf.github.io/Traycer/articles/defaults.html)
   - [Background Tasks](https://falldeaf.github.io/Traycer/articles/tasks.html)
   - [Custom Script Tutorial](https://falldeaf.github.io/Traycer/articles/custom-scripts.html)
-  - [API Reference](https://falldeaf.github.io/Traycer/api/)
+  - [API Reference](https://falldeaf.github.io/Traycer/api/Traycer.html)
 
 Generate (and update) the documentation site locally:
 
