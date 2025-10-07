@@ -23,7 +23,7 @@ Traycer is a lightweight Windows overlay that keeps a strip of live "wells" pinn
 
 ## Installation & Updates
 
-- Download the latest `TraycerSetup_<version>.exe` from [GitHub Releases](https://github.com/thomas-mardis/Traycer/releases).
+- Download the latest `TraycerSetup_<version>.exe` from [GitHub Releases](https://github.com/falldeaf/Traycer/releases).
 - The installer creates a Start Menu shortcut and offers optional desktop and "Start with Windows" choices (unchecked by default).
 - Traycer checks GitHub Releases daily for updates. You can force a check or trigger a winget/installer upgrade from the tray icon menu.
 - Silent install switches follow Inno Setup conventions: `/VERYSILENT /NORESTART` for fully silent, `/SILENT /NORESTART` to show minimal UI.
@@ -39,15 +39,15 @@ Traycer is a lightweight Windows overlay that keeps a strip of live "wells" pinn
 
 ## Documentation
 
-- Hosted docs: <https://thomas-mardis.github.io/Traycer/>
+- Hosted docs: <https://falldeaf.github.io/Traycer/>
 - Source articles live under `docs-src/`; the generated static site (served by GitHub Pages) is committed in `docs/`.
 - Key topics:
-  - [Getting Started](https://thomas-mardis.github.io/Traycer/articles/getting-started.html)
-  - [IPC JSON Protocol](https://thomas-mardis.github.io/Traycer/articles/ipc-protocol.html)
-  - [Defaults Configuration](https://thomas-mardis.github.io/Traycer/articles/defaults.html)
-  - [Background Tasks](https://thomas-mardis.github.io/Traycer/articles/tasks.html)
-  - [Custom Script Tutorial](https://thomas-mardis.github.io/Traycer/articles/custom-scripts.html)
-  - [API Reference](https://thomas-mardis.github.io/Traycer/api/)
+  - [Getting Started](https://falldeaf.github.io/Traycer/articles/getting-started.html)
+  - [IPC JSON Protocol](https://falldeaf.github.io/Traycer/articles/ipc-protocol.html)
+  - [Defaults Configuration](https://falldeaf.github.io/Traycer/articles/defaults.html)
+  - [Background Tasks](https://falldeaf.github.io/Traycer/articles/tasks.html)
+  - [Custom Script Tutorial](https://falldeaf.github.io/Traycer/articles/custom-scripts.html)
+  - [API Reference](https://falldeaf.github.io/Traycer/api/)
 
 Generate (and update) the documentation site locally:
 
