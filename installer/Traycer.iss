@@ -1,4 +1,4 @@
-#define AppIdGuid "{A6E7DA0E-432A-4D5A-96E7-5C4304C9BD79}"
+#define AppIdGuid "A6E7DA0E-432A-4D5A-96E7-5C4304C9BD79"
 #ifndef MyAppVersion
   #define MyAppVersion "0.1.0"
 #endif
@@ -12,7 +12,7 @@
 #define MyUpdatesUrl "https://github.com/thomas-mardis/Traycer/releases"
 
 [Setup]
-AppId={#AppIdGuid}
+AppId={{#AppIdGuid}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
