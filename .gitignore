@@ -93,3 +93,4 @@ env/
 /docs/.manifest
 /docs/obj/
 docfx.log
+public/
